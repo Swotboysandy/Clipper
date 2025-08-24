@@ -250,8 +250,8 @@ def _yt_supports(flag: str) -> bool:
 def _humanize_yt_error(msg: str) -> str:
     low = msg.lower()
     if "confirm you’re not a bot" in low or "confirm you're not a bot" in low:
-        return ("YouTube asked to confirm you’re not a bot. "
-                "Try uploading a fresh cookies.txt for youtube.com, or run from a non-cloud IP.")
+        return ("YouTube is asking for human verification (bot check). "
+                "Upload a fresh cookies.txt for youtube.com (logged-in browser), or use a residential proxy.")
     return msg
 
 def _probe_formats(url: str, cookies: Optional[Path], qlog: queue.Queue) -> dict:
@@ -294,8 +294,7 @@ def _make_ytdlp_cmd(url: str, out_path: str, cookies: Optional[Path],
         "--downloader-args", "ffmpeg_i:-reconnect 1 -reconnect_streamed 1 -reconnect_at_eof 1",
         "--retries", "10",
         "--fragment-retries", "10",
-        # NOTE: only set --retry-sleep if supported; older yt-dlp errors on lists like "2,4,8,16"
-        # We'll use a simple fixed seconds value if available.
+        # only set --retry-sleep if supported
         "-f", fmt,
         "--merge-output-format", "mp4",
         "--no-part",
@@ -306,28 +305,55 @@ def _make_ytdlp_cmd(url: str, out_path: str, cookies: Optional[Path],
     ]
     if cookies and cookies.exists():
         cmd[1:1] = ["--cookies", str(cookies)]
-
     if _yt_supports("--retry-sleep"):
+        # keep it simple: fixed 2s instead of list "2,4,8,16" (older builds choke on lists)
         cmd[cmd.index("-f"):cmd.index("-f")] = ["--retry-sleep", "2"]
-
     if use_sections and start and end:
         cmd[cmd.index(url):cmd.index(url)] = ["--download-sections", f"*{start}-{end}"]
-
     if player_client and _yt_supports("--extractor-args"):
         cmd += ["--extractor-args", f"youtube:player_client={player_client}"]
-
     if ua:
         cmd += ["--user-agent", ua,
                 "--add-header", "Referer: https://www.youtube.com",
                 "--add-header", "Accept-Language: en-US,en;q=0.9"]
-
     if PROXY:
         cmd += ["--proxy", PROXY]
-
     if YTDLP_EXTRA:
         cmd += shlex.split(YTDLP_EXTRA)
-
     return cmd
+
+def is_youtube(url: str) -> bool:
+    u = (url or "").lower()
+    return ("youtube.com" in u) or ("youtu.be" in u)
+
+def download_direct(url: str, out_path: str, start: Optional[str], end: Optional[str], qlog: queue.Queue):
+    """
+    Fallback for non-YouTube URLs: save with ffmpeg.
+    Downloads full file to .full.mp4 then trims (same as yt path) for consistency.
+    """
+    tmp_full = str(Path(out_path).with_suffix(".full.mp4"))
+    qlog.put("Direct download via ffmpeg (non-YouTube)…")
+    try:
+        # Try stream copy first (fast)
+        cmd = ["ffmpeg", "-y", "-i", url, "-c", "copy", tmp_full]
+        run_streamed(cmd, qlog, "ffmpeg (direct copy)")
+    except Exception as e:
+        qlog.put(f"[direct copy failed] {e} — falling back to re-encode")
+        # Re-encode fallback (slower, but more robust)
+        cmd = [
+            "ffmpeg", "-y", "-i", url,
+            "-c:v", "libx264", "-crf", "20", "-preset", "fast",
+            "-c:a", "aac", "-b:a", "192k",
+            tmp_full
+        ]
+        run_streamed(cmd, qlog, "ffmpeg (direct transcode)")
+
+    cut_video(tmp_full, out_path, start, end, qlog)
+    try:
+        Path(tmp_full).unlink(missing_ok=True)
+    except Exception:
+        pass
+    qlog.put("✅ Direct download path complete.")
 
 def download_youtube(url: str, out_path: str, start: Optional[str], end: Optional[str],
                      cookies_file: Optional[Path], qlog: queue.Queue):
@@ -578,7 +604,9 @@ def job_worker(job_id: str, form: Dict):
     workdir: Path = job["workdir"]
 
     try:
-        url = form.get("url", "").strip()
+        # Source selection
+        url = form.get("url", "").strip()              # YouTube or any URL
+        src = form.get("src", "").strip()              # Optional direct non-YouTube URL
         start = parse_hhmmss(form.get("start", ""))
         end   = parse_hhmmss(form.get("end", ""))
         anim_enabled = form.get("anim", "true") == "true"
@@ -599,8 +627,25 @@ def job_worker(job_id: str, form: Dict):
 
         cookies_file = job.get("cookies")
 
-        # 1) Download
-        download_youtube(url, dl_mp4, start, end, cookies_file, qlog)
+        # Uploaded file takes priority (skip yt-dlp entirely)
+        uploaded = job.get("uploaded")
+        if uploaded and Path(uploaded).exists():
+            qlog.put(f"Using uploaded file: {Path(uploaded).name}")
+            # Copy to dl_mp4 to keep pipeline paths consistent
+            Path(dl_mp4).write_bytes(Path(uploaded).read_bytes())
+        else:
+            # Decide how to fetch
+            chosen = src or url
+            if not chosen:
+                raise RuntimeError("No source provided. Supply a YouTube URL in 'url', a direct URL in 'src', or upload a file.")
+            if is_youtube(chosen):
+                # 1) YouTube
+                if not cookies_file:
+                    qlog.put("⚠️  No cookies.txt provided. If YouTube blocks this IP, downloads may fail with a bot-check.")
+                download_youtube(chosen, dl_mp4, start, end, cookies_file, qlog)
+            else:
+                # 2) Non-YouTube direct link
+                download_direct(chosen, dl_mp4, start, end, qlog)
 
         # No subtitles path
         if not burn:
@@ -658,7 +703,7 @@ def start_job():
     workdir.mkdir(parents=True, exist_ok=True)
 
     qlog = queue.Queue()
-    JOBS[job_id] = {"queue": qlog, "done": False, "out_path": "", "workdir": workdir, "cookies": None}
+    JOBS[job_id] = {"queue": qlog, "done": False, "out_path": "", "workdir": workdir, "cookies": None, "uploaded": None}
 
     # ---- COOKIES HANDLING ----
     if "cookies" in files:
@@ -667,7 +712,17 @@ def start_job():
             dst = workdir / "cookies.txt"
             f.save(dst)
             JOBS[job_id]["cookies"] = dst
-    # --------------------------
+    # ---- OPTIONAL FILE UPLOAD (skip yt-dlp) ----
+    # Accept "video" or "file" keys
+    for key in ("video", "file"):
+        if key in files:
+            f = files[key]
+            if f and getattr(f, "filename", ""):
+                dstv = workdir / "uploaded_source.mp4"
+                f.save(dstv)
+                JOBS[job_id]["uploaded"] = str(dstv)
+                qlog.put(f"Received uploaded file: {f.filename}")
+                break
 
     t = threading.Thread(target=job_worker, args=(job_id, form), daemon=True)
     t.start()

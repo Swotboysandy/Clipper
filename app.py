@@ -613,16 +613,19 @@ def start_job():
     qlog = queue.Queue()
     JOBS[job_id] = {"queue": qlog, "done": False, "out_path": "", "workdir": workdir, "cookies": None}
 
-    if "cookies" in files and files["cookies"]:
+    # ---- FIXED COOKIES HANDLING ----
+    if "cookies" in files:
         f = files["cookies"]
-        if f.filename:
-            dst = workdir . / "cookies.txt"
+        if f and getattr(f, "filename", ""):
+            dst = workdir / "cookies.txt"   # ✅ correct
             f.save(dst)
             JOBS[job_id]["cookies"] = dst
+    # ---------------------------------
 
     t = threading.Thread(target=job_worker, args=(job_id, form), daemon=True)
     t.start()
     return jsonify({"job_id": job_id})
+
 
 @app.get("/logs/<job_id>")
 def stream_logs(job_id: str):

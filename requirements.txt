@@ -1,9 +1,9 @@
 Flask==3.0.3
 Flask-Cors==4.0.1
-yt-dlp==2024.12.13
-ffmpeg-python==0.2.0
+gunicorn==21.2.0
+yt-dlp>=2024.04.09,<2025.0.0
 faster-whisper==1.0.3
-ctranslate2==4.6.0
+ctranslate2>=4.4.0
 numpy>=1.26
 regex>=2024.5.15
-aksharamukha==2.3
+aksharamukha>=2.2.0

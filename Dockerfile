@@ -1,22 +1,25 @@
-FROM python:3.10-slim
+# --- Dockerfile (free plan, no persistent disk) ---
+FROM python:3.11-slim
 
-ENV DEBIAN_FRONTEND=noninteractive PIP_NO_CACHE_DIR=1
-
-# ffmpeg + Noto fonts for Hindi/Gurmukhi
+# System deps
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ffmpeg \    fonts-noto \    fonts-noto-core \    fonts-noto-extra \    fonts-noto-color-emoji \    ca-certificates \ && rm -rf /var/lib/apt/lists/*
+    ffmpeg wget ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-
 COPY requirements.txt .
-RUN python -m pip install --upgrade pip && pip install -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# Render persistent disk will be mounted at /data
-ENV PORT=7860 \
-    HF_HOME=/data/hf-cache \    JOBS_DIR=/data/jobs \    DEFAULT_MODEL=small
+# Env (one line per var; avoid the "\" continuation)
+ENV PORT=10000
+ENV HF_HOME=/tmp/hf
+ENV JOBS_DIR=/tmp/jobs
+ENV PYTHONUNBUFFERED=1
+ENV DEFAULT_MODEL=small
 
-EXPOSE 7860
+RUN mkdir -p /tmp/hf /tmp/jobs
 
-CMD ["gunicorn", "app:app", "-k", "gthread", "--threads", "8", "--workers", "1", "--timeout", "900", "--bind", "0.0.0.0:7860"]
+# Start (Render injects $PORT)
+CMD exec gunicorn -k gthread -w 1 -t 0 -b 0.0.0.0:$PORT app:app

@@ -5,6 +5,7 @@ import uuid
 import threading
 import queue
 import subprocess
+import shlex
 from pathlib import Path
 from typing import List, Dict, Tuple, Optional
 
@@ -14,6 +15,10 @@ from flask_cors import CORS
 # ---- Speed up HF downloads / avoid timeouts ----
 os.environ.setdefault("HF_HUB_READ_TIMEOUT", "60")
 os.environ.setdefault("HF_HUB_ENABLE_HF_TRANSFER", "1")  # if hf-transfer installed
+
+# Optional proxy / extra flags for yt-dlp (configure via Render env vars if needed)
+PROXY = os.getenv("PROXY", "").strip()             # e.g. http://user:pass@host:port
+YTDLP_EXTRA = os.getenv("YTDLP_EXTRA", "").strip()  # any extra flags
 
 # =================== OUTPUT / STYLE ===================
 OUTPUT_W, OUTPUT_H = 720, 1280  # 9:16 target
@@ -80,7 +85,7 @@ def devanagari_to_hinglish(txt: str) -> str:
     try:
         if _has_aksh:
             roman = aksh_trans.process('Devanagari', 'HK', txt)
-            roman = roman.replace("~n", "n").replace("aa", "a").replace("\\.n", "n").replace(".n", "n")
+            roman = roman.replace("~n", "n").replace("aa", "a").replace("\.n", "n").replace(".n", "n")
             return roman
         if _has_indic:
             roman = itr_trans(txt, DEVANAGARI, ITRANS)
@@ -242,16 +247,26 @@ def _probe_formats(url: str, cookies: Optional[Path], qlog: queue.Queue) -> dict
         qlog.put(f"[probe error] {e}")
         return {}
 
+USER_AGENTS = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123 Safari/537.36",
+    "com.google.android.youtube/19.09.37 (Linux; U; Android 13) gzip",
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1",
+]
+YTDLP_PLAYER_CLIENTS = ["android", "ios", "web", "web_creator", "tv"]
+
 def _make_ytdlp_cmd(url: str, out_path: str, cookies: Optional[Path],
                     use_sections: bool, start: Optional[str], end: Optional[str],
-                    fmt: str) -> list:
+                    fmt: str, player_client: Optional[str]=None, ua: Optional[str]=None) -> list:
     cmd = [
         "yt-dlp",
         "--force-ipv4",
-        "-N", "2",
+        "-N", "1",
         "--hls-prefer-native",
         "--downloader", "ffmpeg",
         "--downloader-args", "ffmpeg_i:-reconnect 1 -reconnect_streamed 1 -reconnect_at_eof 1",
+        "--retries", "10",
+        "--fragment-retries", "10",
+        "--retry-sleep", "2,4,8,16",
         "-f", fmt,
         "--merge-output-format", "mp4",
         "--no-part",
@@ -262,6 +277,16 @@ def _make_ytdlp_cmd(url: str, out_path: str, cookies: Optional[Path],
         cmd[1:1] = ["--cookies", str(cookies)]
     if use_sections and start and end:
         cmd[cmd.index(url):cmd.index(url)] = ["--download-sections", f"*{start}-{end}"]
+    if player_client:
+        cmd += ["--extractor-args", f"youtube:player_client={player_client}"]
+    if ua:
+        cmd += ["--user-agent", ua,
+                "--add-header", "Referer: https://www.youtube.com",
+                "--add-header", "Accept-Language: en-US,en;q=0.9"]
+    if PROXY:
+        cmd += ["--proxy", PROXY]
+    if YTDLP_EXTRA:
+        cmd += shlex.split(YTDLP_EXTRA)
     return cmd
 
 def download_youtube(url: str, out_path: str, start: Optional[str], end: Optional[str],
@@ -277,34 +302,37 @@ def download_youtube(url: str, out_path: str, start: Optional[str], end: Optiona
 
     tmp_full = str(Path(out_path).with_suffix(".full.mp4"))
 
-    formats_to_try = [
+    fmts = [
         "bv*+ba[ext=m4a]/b[ext=mp4]/best",
         "bv*+ba/b/best",
         "bv*[height<=1080]+ba/b[height<=1080]/best",
         "bv*[height<=1080][vcodec*=avc1]+ba/b[height<=1080][vcodec*=avc1]/best",
     ]
-
     attempts = []
-    for fmt in formats_to_try:
-        attempts += [
-            dict(fmt=fmt, use_sections=True,  cookies=True),
-            dict(fmt=fmt, use_sections=True,  cookies=False),
-            dict(fmt=fmt, use_sections=False, cookies=True),
-            dict(fmt=fmt, use_sections=False, cookies=False),
-        ]
+    for fmt in fmts:
+        for client in YTDLP_PLAYER_CLIENTS:
+            for ua in USER_AGENTS:
+                attempts += [
+                    dict(fmt=fmt, sections=True,  cookies=True,  client=client, ua=ua),
+                    dict(fmt=fmt, sections=True,  cookies=False, client=client, ua=ua),
+                    dict(fmt=fmt, sections=False, cookies=True,  client=client, ua=ua),
+                    dict(fmt=fmt, sections=False, cookies=False, client=client, ua=ua),
+                ]
 
     last_err = None
     for i, opt in enumerate(attempts, 1):
         try:
-            use_sections = opt["use_sections"]
+            use_sections = opt["sections"]
             fmt          = opt["fmt"]
             with_cookies = opt["cookies"]
+            client       = opt["client"]
+            ua           = opt["ua"]
             cookies      = cookies_file if with_cookies else None
 
-            qlog.put(f"Attempt {i}: fmt='{fmt}' sections={use_sections} cookies={'yes' if cookies else 'no'}")
+            qlog.put(f"Attempt {i}: fmt='{fmt}' client={client} ua={'android' if 'android' in ua.lower() else 'web/ios'} sections={use_sections} cookies={'yes' if cookies else 'no'}")
 
             target = out_path if use_sections else tmp_full
-            cmd = _make_ytdlp_cmd(url, target, cookies, use_sections, start, end, fmt)
+            cmd = _make_ytdlp_cmd(url, target, cookies, use_sections, start, end, fmt, player_client=client, ua=ua)
             run_streamed(cmd, qlog, "yt-dlp")
 
             if use_sections:
@@ -313,12 +341,9 @@ def download_youtube(url: str, out_path: str, start: Optional[str], end: Optiona
             else:
                 cut_video(tmp_full, out_path, start, end, qlog)
                 qlog.put("✅ Downloaded full video and trimmed successfully.")
-                try:
-                    Path(tmp_full).unlink(missing_ok=True)
-                except Exception:
-                    pass
+                try: Path(tmp_full).unlink(missing_ok=True)
+                except Exception: pass
                 return
-
         except Exception as e:
             last_err = e
             qlog.put(f"[attempt failed] {e}")
@@ -460,7 +485,7 @@ def _escape_ffmpeg_filter_path(p: str) -> str:
     """
     s = p.replace("\\", "/")
     if len(s) >= 2 and s[1] == ":":
-        s = s[0] + "\\:" + s[2:]  # e.g. C:/... -> C\:/...
+        s = s[0] + "\\:" + s[2:]  # e.g. C:/... -> C\:/
     s = s.replace("'", r"\'")
     return s
 
@@ -591,7 +616,7 @@ def start_job():
     if "cookies" in files and files["cookies"]:
         f = files["cookies"]
         if f.filename:
-            dst = workdir / "cookies.txt"
+            dst = workdir . / "cookies.txt"
             f.save(dst)
             JOBS[job_id]["cookies"] = dst
 

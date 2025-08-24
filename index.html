@@ -43,39 +43,22 @@
     margin-bottom: clamp(10px, 1.8vw, 16px);
     box-shadow: var(--shadow);
   }
-  label{
-    display:block; margin: 8px 0 6px; color: var(--muted);
-    font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: .4px;
-  }
+  label{ display:block; margin: 8px 0 6px; color: var(--muted); font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: .4px; }
   input[type="text"], input[type="url"], select{
-    width: 100%; height: clamp(44px, 5.5vw, 48px);
-    border-radius: 12px; border: 1px solid var(--stroke);
-    background: #091336; color: var(--text);
-    padding: 10px 12px; outline: none; transition: border .15s, box-shadow .15s, background .15s;
+    width: 100%; height: clamp(44px, 5.5vw, 48px); border-radius: 12px; border: 1px solid var(--stroke);
+    background: #091336; color: var(--text); padding: 10px 12px; outline: none;
+    transition: border .15s, box-shadow .15s, background .15s;
   }
   input::placeholder{ color: #8ea1da; }
-  input:focus, select:focus{
-    border-color: var(--ring);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 25%, transparent);
-    background: #081233;
-  }
+  input:focus, select:focus{ border-color: var(--ring); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 25%, transparent); background: #081233; }
   .grid{ display:grid; gap: clamp(10px, 1.6vw, 14px); }
   .row2{ grid-template-columns: 1fr 1fr; }
   .row3{ grid-template-columns: repeat(3, 1fr); }
   .row4{ grid-template-columns: repeat(4, 1fr); }
   @media (max-width: 980px){ .row4{ grid-template-columns: repeat(2, 1fr); } }
   @media (max-width: 760px){ .row3, .row2, .row4 { grid-template-columns: 1fr; } }
-
   .player-wrap{ display:grid; gap: 12px; }
-  #playerContainer{
-    aspect-ratio: 16 / 9;
-    background: #091336;
-    border: 1px solid var(--stroke);
-    border-radius: 14px;
-    overflow: hidden;
-    display:grid; place-items:center;
-  }
-
+  #playerContainer{ aspect-ratio: 16 / 9; background: #091336; border: 1px solid var(--stroke); border-radius: 14px; overflow: hidden; display:grid; place-items:center; }
   .toolbar{ display:flex; align-items:center; gap: 10px; flex-wrap: wrap; }
   @media (max-width: 760px){
     .toolbar{ flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; gap: 8px; padding: 4px 8px; margin: 0 -8px; }
@@ -83,37 +66,31 @@
     .toolbar::-webkit-scrollbar-thumb{ background: #1d2a55; border-radius: 999px; }
   }
   @media (max-width: 360px){ .toolbar{ flex-wrap: wrap; overflow-x: visible; margin: 0; padding: 0; } }
-
   .kbd{ font: 600 12px/1 "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     background:#091336; border:1px solid #2a3c77; border-radius:6px; padding:4px 6px; color:#dfe8ff; }
-
   .pill{
     display:inline-flex; align-items:center; justify-content:center; white-space: nowrap;
-    min-height: 38px; padding: 8px 12px; border-radius: 999px; background: #0a1438;
-    border: 1px solid #2b3f80; color: #f2f5ff; font-weight: 800; letter-spacing: .2px;
-    user-select: none; cursor: pointer; transition: transform .05s, background .15s, border .15s, box-shadow .15s, filter .1s;
+    min-height: 38px; padding: 8px 12px; border-radius: 999px; background: #0a1438; border: 1px solid #2b3f80;
+    color: #f2f5ff; font-weight: 800; letter-spacing: .2px; user-select: none; cursor: pointer;
+    transition: transform .05s, background .15s, border .15s, box-shadow .15s, filter .1s;
   }
   .pill:hover{ background: #0f1b49; border-color:#3a57a8; }
   .pill:active{ transform: translateY(1px); }
   .pill[aria-pressed="true"]{ background:#16266b; border-color:#4a73df; box-shadow: inset 0 0 0 1px #2b4ec7; }
-
   @media (max-width: 760px){ .pill{ min-height: 36px; padding: 7px 11px; font-size: 0.96rem; } }
-
   .btn{
     background: linear-gradient(140deg, var(--accent), var(--accent-2));
-    color: #041027; border: none; border-radius: 12px; padding: 12px 16px;
-    font-weight: 900; letter-spacing: .3px; cursor: pointer; min-height: clamp(44px, 5.8vw, 50px);
-    box-shadow: 0 8px 24px rgba(105,163,255,.35); transition: transform .06s, box-shadow .2s, filter .1s;
+    color: #041027; border: none; border-radius: 12px; padding: 12px 16px; font-weight: 900; letter-spacing: .3px;
+    cursor: pointer; min-height: clamp(44px, 5.8vw, 50px); box-shadow: 0 8px 24px rgba(105,163,255,.35);
+    transition: transform .06s, box-shadow .2s, filter .1s;
   }
   .btn:hover{ filter: brightness(1.05); box-shadow: 0 10px 28px rgba(105,163,255,.45); }
   .btn:active{ transform: translateY(1px); }
   .btn:disabled{ opacity: .6; cursor: not-allowed; }
-
-  pre{
-    white-space: pre-wrap;
-    background: #091336; border:1px solid var(--stroke); color:#dfe6ff;
-    padding: 14px; border-radius: 14px; height: clamp(240px, 36vh, 320px); overflow: auto;
-  }
+  .actions{ display:flex; gap: 12px; align-items:center; }
+  @media (max-width: 760px){ .actions{ position: sticky; bottom: 10px; z-index: 10; } .actions .btn{ flex: 1; } }
+  pre{ white-space: pre-wrap; background: #091336; border:1px solid var(--stroke); color:#dfe6ff;
+    padding: 14px; border-radius: 14px; height: clamp(240px, 36vh, 320px); overflow: auto; }
   a.dl{ display:inline-block; margin-top:10px; color:#00171f; background: var(--success);
     padding: 10px 14px; border-radius: 12px; text-decoration:none; font-weight: 900; }
 </style>
@@ -226,7 +203,7 @@
         </div>
         <div>
           <label>Local model folder (optional)</label>
-          <input type="text" name="local_model" placeholder="e.g. C:\\models\\faster-whisper-large-v3" />
+          <input type="text" name="local_model" placeholder="e.g. /models/faster-whisper-large-v3" />
         </div>
         <div>
           <label>Output base name</label>
@@ -238,21 +215,21 @@
         <div>
           <label>Cookies (optional)</label>
           <input type="file" name="cookies" accept=".txt" />
-          <div style="color:var(--muted)">If a video is age/region restricted, export cookies.txt from your browser.</div>
+          <div style="color:var(--muted)">Export Netscape cookies.txt from your browser for youtube.com + google.com if blocked.</div>
         </div>
-        <div style="display:flex;align-items:center;gap:16px;justify-content:flex-start;margin-top:26px;flex-wrap:wrap">
-          <label style="display:flex;align-items:center;gap:8px;margin:0;color:var(--text)">
+        <div style="display:flex;align-items:center;gap:14px;justify-content:flex-start;margin-top:26px;flex-wrap:wrap">
+          <label style="display:flex;align-items:center;gap:8px;margin:0">
             <input type="checkbox" name="anim" id="anim" checked />
             Animate captions
           </label>
-          <label style="display:flex;align-items:center;gap:8px;margin:0;color:var(--text)">
+          <label style="display:flex;align-items:center;gap:8px;margin:0">
             <input type="checkbox" name="burn" id="burn" checked />
-            Burn subtitles into video
+            Burn captions on video
           </label>
         </div>
       </div>
 
-      <div class="actions" style="margin-top:14px;display:flex;gap:12px;align-items:center">
+      <div class="actions" style="margin-top:14px">
         <button id="startBtn" type="submit" class="btn">Download & Generate</button>
         <span id="result"></span>
       </div>
@@ -302,7 +279,6 @@
     return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
   }
 
-  // YouTube
   let player = null;
   let loopTimer = null;
 
@@ -383,7 +359,6 @@
     });
   });
 
-  // Loop selection
   function toggleLoop(on){
     if(loopTimer){ clearInterval(loopTimer); loopTimer=null; }
     if(!on) return;
@@ -400,7 +375,6 @@
   }
   if(loopToggle){ loopToggle.addEventListener('change', e=>toggleLoop(e.target.checked)); }
 
-  // Keyboard shortcuts (desktop only)
   window.addEventListener('keydown',(ev)=>{
     if (matchMedia('(hover: none)').matches) return;
     const tag = (ev.target && ev.target.tagName || '').toLowerCase();
@@ -414,7 +388,6 @@
     if(ev.key === '.'){ seekDelta(0.5); }
   });
 
-  // Submit & logs
   document.getElementById('jobForm').addEventListener('submit', async (e)=>{
     e.preventDefault();
     resultEl.innerHTML = '';
@@ -429,7 +402,7 @@
     const form = e.target;
     const fd = new FormData(form);
     fd.set('anim', fd.get('anim') ? 'true' : 'false');
-    fd.set('burn', burnToggle && burnToggle.checked ? 'true' : 'false');
+    fd.set('burn', fd.get('burn') ? 'true' : 'false');
 
     try{
       const res = await fetch(API_BASE + '/start', { method:'POST', body: fd });
@@ -461,5 +434,6 @@
 
   window.addEventListener('load', ()=> setTimeout(tryLoadPreview, 300));
 </script>
+<script src="https://www.youtube.com/iframe_api"></script>
 </body>
 </html>

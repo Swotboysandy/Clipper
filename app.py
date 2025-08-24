@@ -85,7 +85,7 @@ def devanagari_to_hinglish(txt: str) -> str:
     try:
         if _has_aksh:
             roman = aksh_trans.process('Devanagari', 'HK', txt)
-            roman = roman.replace("~n", "n").replace("aa", "a").replace("\.n", "n").replace(".n", "n")
+            roman = roman.replace("~n", "n").replace("aa", "a").replace("\\.n", "n").replace(".n", "n")
             return roman
         if _has_indic:
             roman = itr_trans(txt, DEVANAGARI, ITRANS)
@@ -233,10 +233,38 @@ def cut_video(src: str, dst: str, start: Optional[str], end: Optional[str], qlog
     cmd = ["ffmpeg","-y","-ss", start,"-to", end,"-i", src,"-c:v","copy","-c:a","copy", dst]
     run_streamed(cmd, qlog, "ffmpeg (trim)")
 
+# ---------- yt-dlp feature detection ----------
+_YTDLP_HELP = None
+def _yt_supports(flag: str) -> bool:
+    """Return True if yt-dlp --help mentions this flag."""
+    global _YTDLP_HELP
+    if _YTDLP_HELP is None:
+        try:
+            _YTDLP_HELP = subprocess.check_output(
+                ["yt-dlp", "--help"], text=True, stderr=subprocess.STDOUT, errors="ignore"
+            )
+        except Exception:
+            _YTDLP_HELP = ""
+    return flag in _YTDLP_HELP
+
+def _humanize_yt_error(msg: str) -> str:
+    low = msg.lower()
+    if "confirm you’re not a bot" in low or "confirm you're not a bot" in low:
+        return ("YouTube asked to confirm you’re not a bot. "
+                "Try uploading a fresh cookies.txt for youtube.com, or run from a non-cloud IP.")
+    return msg
+
 def _probe_formats(url: str, cookies: Optional[Path], qlog: queue.Queue) -> dict:
-    cmd = ["yt-dlp","-J","--no-warnings", url]
+    cmd = ["yt-dlp","-J","--no-warnings"]
+    if PROXY:
+        cmd += ["--proxy", PROXY]
     if cookies and cookies.exists():
-        cmd[1:1] = ["--cookies", str(cookies)]
+        cmd += ["--cookies", str(cookies)]
+    if _yt_supports("--extractor-args"):
+        cmd += ["--extractor-args", "youtube:player_client=android"]
+    if YTDLP_EXTRA:
+        cmd += shlex.split(YTDLP_EXTRA)
+    cmd += [url]
     try:
         out = subprocess.check_output(cmd, text=True, stderr=subprocess.STDOUT)
         return json.loads(out)
@@ -266,27 +294,39 @@ def _make_ytdlp_cmd(url: str, out_path: str, cookies: Optional[Path],
         "--downloader-args", "ffmpeg_i:-reconnect 1 -reconnect_streamed 1 -reconnect_at_eof 1",
         "--retries", "10",
         "--fragment-retries", "10",
-        "--retry-sleep", "2,4,8,16",
+        # NOTE: only set --retry-sleep if supported; older yt-dlp errors on lists like "2,4,8,16"
+        # We'll use a simple fixed seconds value if available.
         "-f", fmt,
         "--merge-output-format", "mp4",
         "--no-part",
+        "--no-warnings",
+        "--geo-bypass",
         "-o", out_path,
         url,
     ]
     if cookies and cookies.exists():
         cmd[1:1] = ["--cookies", str(cookies)]
+
+    if _yt_supports("--retry-sleep"):
+        cmd[cmd.index("-f"):cmd.index("-f")] = ["--retry-sleep", "2"]
+
     if use_sections and start and end:
         cmd[cmd.index(url):cmd.index(url)] = ["--download-sections", f"*{start}-{end}"]
-    if player_client:
+
+    if player_client and _yt_supports("--extractor-args"):
         cmd += ["--extractor-args", f"youtube:player_client={player_client}"]
+
     if ua:
         cmd += ["--user-agent", ua,
                 "--add-header", "Referer: https://www.youtube.com",
                 "--add-header", "Accept-Language: en-US,en;q=0.9"]
+
     if PROXY:
         cmd += ["--proxy", PROXY]
+
     if YTDLP_EXTRA:
         cmd += shlex.split(YTDLP_EXTRA)
+
     return cmd
 
 def download_youtube(url: str, out_path: str, start: Optional[str], end: Optional[str],
@@ -329,7 +369,10 @@ def download_youtube(url: str, out_path: str, start: Optional[str], end: Optiona
             ua           = opt["ua"]
             cookies      = cookies_file if with_cookies else None
 
-            qlog.put(f"Attempt {i}: fmt='{fmt}' client={client} ua={'android' if 'android' in ua.lower() else 'web/ios'} sections={use_sections} cookies={'yes' if cookies else 'no'}")
+            qlog.put(
+                f"Attempt {i}: fmt='{fmt}' client={client} ua={'android' if 'android' in ua.lower() else 'web/ios'} "
+                f"sections={use_sections} cookies={'yes' if cookies else 'no'}"
+            )
 
             target = out_path if use_sections else tmp_full
             cmd = _make_ytdlp_cmd(url, target, cookies, use_sections, start, end, fmt, player_client=client, ua=ua)
@@ -341,14 +384,18 @@ def download_youtube(url: str, out_path: str, start: Optional[str], end: Optiona
             else:
                 cut_video(tmp_full, out_path, start, end, qlog)
                 qlog.put("✅ Downloaded full video and trimmed successfully.")
-                try: Path(tmp_full).unlink(missing_ok=True)
-                except Exception: pass
+                try:
+                    Path(tmp_full).unlink(missing_ok=True)
+                except Exception:
+                    pass
                 return
+
         except Exception as e:
             last_err = e
             qlog.put(f"[attempt failed] {e}")
 
-    raise last_err or RuntimeError("yt-dlp failed with all strategies")
+    msg = _humanize_yt_error(str(last_err or "unknown error"))
+    raise RuntimeError(f"yt-dlp failed with all strategies: {msg}")
 
 def extract_clean_audio(in_video: str, out_wav: str, qlog: queue.Queue):
     cmd = [
@@ -485,7 +532,7 @@ def _escape_ffmpeg_filter_path(p: str) -> str:
     """
     s = p.replace("\\", "/")
     if len(s) >= 2 and s[1] == ":":
-        s = s[0] + "\\:" + s[2:]  # e.g. C:/... -> C\:/
+        s = s[0] + "\\:" + s[2:]  # e.g. C:/... -> C\:/...
     s = s.replace("'", r"\'")
     return s
 
@@ -613,19 +660,18 @@ def start_job():
     qlog = queue.Queue()
     JOBS[job_id] = {"queue": qlog, "done": False, "out_path": "", "workdir": workdir, "cookies": None}
 
-    # ---- FIXED COOKIES HANDLING ----
+    # ---- COOKIES HANDLING ----
     if "cookies" in files:
         f = files["cookies"]
         if f and getattr(f, "filename", ""):
-            dst = workdir / "cookies.txt"   # ✅ correct
+            dst = workdir / "cookies.txt"
             f.save(dst)
             JOBS[job_id]["cookies"] = dst
-    # ---------------------------------
+    # --------------------------
 
     t = threading.Thread(target=job_worker, args=(job_id, form), daemon=True)
     t.start()
     return jsonify({"job_id": job_id})
-
 
 @app.get("/logs/<job_id>")
 def stream_logs(job_id: str):
@@ -661,7 +707,10 @@ def download(job_id: str, fname: str):
 
 @app.get("/")
 def root():
-    return send_from_directory(Path(__file__).parent.resolve(), "index.html")
+    index_path = Path(__file__).parent.resolve() / "index.html"
+    if index_path.exists():
+        return send_from_directory(index_path.parent, "index.html")
+    return jsonify({"ok": True, "msg": "Uploader running"})
 
 @app.get("/favicon.ico")
 def favicon():

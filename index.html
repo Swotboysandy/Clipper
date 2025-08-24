@@ -1,0 +1,480 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>YouTube → Auto Subtitles (Hindi / Hinglish / English)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #050711;
+    --bg-accent: #060b1a;
+    --card: #0a1024;
+    --card-2: #0c1430;
+    --stroke: #1c2a59;
+    --text: #f6f8ff;
+    --muted: #a8b7e3;
+    --ring: #79a8ff;
+    --accent: #69a3ff;
+    --accent-2: #9bc5ff;
+    --success: #32d07b;
+    --shadow: 0 12px 44px rgba(0,0,0,.45);
+  }
+  *{box-sizing:border-box}
+  html, body { height: 100%; }
+  body{
+    margin:0;
+    color: var(--text);
+    background:
+      radial-gradient(1100px 550px at 85% -10%, rgba(65,105,225,.16), transparent 55%),
+      radial-gradient(900px 500px at -15% 115%, rgba(40,120,240,.12), transparent 55%),
+      var(--bg);
+    font: clamp(13.5px, 0.9vw + 10px, 16px)/1.6 "Manrope", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  .wrap{ max-width: min(1200px, 100%); margin: clamp(14px, 2vw, 28px) auto; padding: 0 clamp(10px, 2.4vw, 20px); }
+  h1{
+    margin: 0 0 clamp(10px, 1.2vw, 16px);
+    font-size: clamp(18px, 1.1rem + 0.7vw, 22px);
+    font-weight: 800;
+    letter-spacing: .2px;
+  }
+  .card{
+    background: linear-gradient(180deg, var(--card) 0%, var(--card-2) 100%);
+    border: 1px solid var(--stroke);
+    border-radius: 18px;
+    padding: clamp(12px, 2vw, 18px);
+    margin-bottom: clamp(10px, 1.8vw, 16px);
+    box-shadow: var(--shadow);
+  }
+  label{
+    display:block; margin: 8px 0 6px; color: var(--muted);
+    font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: .4px;
+  }
+  input[type="text"], input[type="url"], select{
+    width: 100%;
+    height: clamp(44px, 5.5vw, 48px);
+    border-radius: 12px;
+    border: 1px solid var(--stroke);
+    background: #091336;
+    color: var(--text);
+    padding: 10px 12px;
+    outline: none;
+    transition: border .15s, box-shadow .15s, background .15s;
+  }
+  input::placeholder{ color: #8ea1da; }
+  input:focus, select:focus{
+    border-color: var(--ring);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 25%, transparent);
+    background: #081233;
+  }
+  .grid{ display:grid; gap: clamp(10px, 1.6vw, 14px); }
+  .row2{ grid-template-columns: 1fr 1fr; }
+  .row3{ grid-template-columns: repeat(3, 1fr); }
+  .row4{ grid-template-columns: repeat(4, 1fr); }
+  @media (max-width: 980px){ .row4{ grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 760px){ .row3, .row2, .row4 { grid-template-columns: 1fr; } }
+  .player-wrap{ display:grid; gap: 12px; }
+  #playerContainer{
+    aspect-ratio: 16 / 9;
+    background: #091336;
+    border: 1px solid var(--stroke);
+    border-radius: 14px;
+    overflow: hidden;
+    display:grid; place-items:center;
+  }
+  .toolbar{
+    display:flex; align-items:center; gap: 10px; flex-wrap: wrap;
+  }
+  @media (max-width: 760px){
+    .toolbar{
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      gap: 8px;
+      padding: 4px 8px;
+      margin: 0 -8px;
+    }
+    .toolbar::-webkit-scrollbar{ height: 6px; }
+    .toolbar::-webkit-scrollbar-thumb{ background: #1d2a55; border-radius: 999px; }
+  }
+  @media (max-width: 360px){
+    .toolbar{ flex-wrap: wrap; overflow-x: visible; margin: 0; padding: 0; }
+  }
+  .kbd{
+    font: 600 12px/1 "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    background:#091336; border:1px solid #2a3c77; border-radius:6px; padding:4px 6px; color:#dfe8ff;
+  }
+  .pill{
+    display:inline-flex; align-items:center; justify-content:center;
+    white-space: nowrap;
+    min-height: 38px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: #0a1438;
+    border: 1px solid #2b3f80;
+    color: #f2f5ff;
+    font-weight: 800;
+    letter-spacing: .2px;
+    user-select: none;
+    cursor: pointer;
+    transition: transform .05s, background .15s, border .15s, box-shadow .15s, filter .1s;
+  }
+  .pill:hover{ background: #0f1b49; border-color:#3a57a8; }
+  .pill:active{ transform: translateY(1px); }
+  .pill[aria-pressed="true"]{
+    background:#16266b; border-color:#4a73df;
+    box-shadow: inset 0 0 0 1px #2b4ec7;
+  }
+  @media (max-width: 760px){
+    .pill{ min-height: 36px; padding: 7px 11px; font-size: 0.96rem; }
+  }
+  .btn{
+    background: linear-gradient(140deg, var(--accent), var(--accent-2));
+    color: #041027;
+    border: none;
+    border-radius: 12px;
+    padding: 12px 16px;
+    font-weight: 900;
+    letter-spacing: .3px;
+    cursor: pointer;
+    min-height: clamp(44px, 5.8vw, 50px);
+    box-shadow: 0 8px 24px rgba(105,163,255,.35);
+    transition: transform .06s, box-shadow .2s, filter .1s;
+  }
+  .btn:hover{ filter: brightness(1.05); box-shadow: 0 10px 28px rgba(105,163,255,.45); }
+  .btn:active{ transform: translateY(1px); }
+  .btn:disabled{ opacity: .6; cursor: not-allowed; }
+  .actions{ display:flex; gap: 12px; align-items:center; }
+  @media (max-width: 760px){
+    .actions{ position: sticky; bottom: 10px; z-index: 10; }
+    .actions .btn{ flex: 1; }
+  }
+  pre{
+    white-space: pre-wrap;
+    background: #091336;
+    border:1px solid var(--stroke);
+    color:#dfe6ff;
+    padding: 14px;
+    border-radius: 14px;
+    height: clamp(240px, 36vh, 320px);
+    overflow: auto;
+  }
+  a.dl{
+    display:inline-block; margin-top:10px; color:#00171f;
+    background: var(--success);
+    padding: 10px 14px; border-radius: 12px; text-decoration:none; font-weight: 900;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🎬 YouTube → Auto Subtitles (Hindi / Hinglish / English)</h1>
+  <div class="card">
+    <form id="jobForm">
+      <label for="urlInput">YouTube URL</label>
+      <input id="urlInput" type="url" inputmode="url" name="url" required placeholder="https://www.youtube.com/watch?v=..." />
+      <div class="player-wrap" style="margin-top:8px">
+        <div id="playerContainer"><div id="ytplayer" style="width:100%;height:100%"></div></div>
+        <div class="toolbar" id="toolbar">
+          <button class="pill" type="button" data-seek="-5">⟲ 5s</button>
+          <button class="pill" type="button" data-seek="-1">⟲ 1s</button>
+          <button class="pill" type="button" id="togglePlay">⏯ Play/Pause</button>
+          <button class="pill" type="button" data-seek="1">↠ 1s</button>
+          <button class="pill" type="button" data-seek="5">↠ 5s</button>
+          <span style="margin-left:6px;color:var(--muted)">Pick:</span>
+          <button class="pill" type="button" id="setStart">Set Start ⟵ Now</button>
+          <button class="pill" type="button" id="setEnd">Set End ⟵ Now</button>
+          <button class="pill" type="button" id="swapSE">Swap</button>
+          <button class="pill" type="button" id="clearSE">Clear</button>
+          <span style="margin-left:6px;color:var(--muted)">Quick length:</span>
+          <button class="pill" type="button" data-qlen="10">+10s</button>
+          <button class="pill" type="button" data-qlen="15">+15s</button>
+          <button class="pill" type="button" data-qlen="20">+20s</button>
+          <button class="pill" type="button" data-qlen="30">+30s</button>
+          <label class="pill" style="display:flex;align-items:center;gap:8px">
+            <input id="loopToggle" type="checkbox" />
+            Loop selection
+          </label>
+          <span class="shortcuts" style="margin-left:auto;color:var(--muted)">
+            Shortcuts:
+            <span class="kbd">J</span> -10s
+            <span class="kbd">K</span> ⏯
+            <span class="kbd">L</span> +10s
+            <span class="kbd">S</span> Set Start
+            <span class="kbd">E</span> Set End
+            <span class="kbd">,</span> -0.5s
+            <span class="kbd">.</span> +0.5s
+          </span>
+        </div>
+      </div>
+      <div class="grid row2" style="margin-top:12px">
+        <div>
+          <label for="startInput">Start (HH:MM:SS)</label>
+          <input id="startInput" type="text" name="start" placeholder="e.g. 00:02:30 (optional)" />
+        </div>
+        <div>
+          <label for="endInput">End (HH:MM:SS)</label>
+          <input id="endInput" type="text" name="end" placeholder="e.g. 00:03:05 (optional)" />
+        </div>
+      </div>
+      <div class="grid row4" style="margin-top:6px">
+        <div>
+          <label>Model</label>
+          <select name="model">
+            <option value="small" selected>small</option>
+            <option value="medium">medium</option>
+            <option value="large-v3">large-v3</option>
+          </select>
+        </div>
+        <div>
+          <label>Device</label>
+          <select name="device">
+            <option value="cpu" selected>cpu</option>
+            <option value="cuda">cuda</option>
+          </select>
+        </div>
+        <div>
+          <label>Compute</label>
+          <select name="compute">
+            <option value="int8" selected>int8</option>
+            <option value="int8_float16">int8_float16</option>
+            <option value="int8_float32">int8_float32</option>
+            <option value="float32">float32</option>
+            <option value="float16">float16</option>
+          </select>
+        </div>
+        <div>
+          <label>Output</label>
+          <select name="output_mode">
+            <option value="hindi" selected>Hindi (Devanagari)</option>
+            <option value="hinglish">Hinglish (romanized Hindi)</option>
+            <option value="english">English (translated)</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid row3" style="margin-top:6px">
+        <div>
+          <label>Language hint</label>
+          <select name="lang">
+            <option value="auto" selected>auto</option>
+            <option value="hi">hi (Hindi)</option>
+            <option value="pa">pa (Punjabi)</option>
+            <option value="en">en (English)</option>
+          </select>
+        </div>
+        <div>
+          <label>Local model folder (optional)</label>
+          <input type="text" name="local_model" placeholder="e.g. C:\\models\\faster-whisper-large-v3" />
+        </div>
+        <div>
+          <label>Output base name</label>
+          <input type="text" name="outbase" value="youtube_clip" />
+        </div>
+      </div>
+      <div class="grid row2" style="margin-top:6px">
+        <div>
+          <label>Cookies (optional)</label>
+          <input type="file" name="cookies" accept=".txt" />
+          <div style="color:var(--muted)">If a video is age/region restricted, export cookies.txt from your browser.</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;justify-content:flex-start;margin-top:26px;flex-wrap:wrap">
+          <label style="display:flex;align-items:center;gap:8px;margin:0">
+            <input type="checkbox" name="anim" id="anim" checked />
+            Animate captions (CapCut style)
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;margin:0">
+            <input type="checkbox" name="burn" id="burn" checked />
+            Burn subtitles
+          </label>
+        </div>
+      </div>
+      <div class="actions" style="margin-top:14px">
+        <button id="startBtn" type="submit" class="btn">Download & Generate</button>
+        <span id="result"></span>
+      </div>
+    </form>
+  </div>
+  <div class="card">
+    <label>Logs</label>
+    <pre id="log">(waiting)</pre>
+  </div>
+</div>
+<script src="https://www.youtube.com/iframe_api"></script>
+<script>
+  const API_BASE = (location.protocol.startsWith('http')) ? '' : 'http://127.0.0.1:7860';
+  const logEl = document.getElementById('log');
+  const startBtn = document.getElementById('startBtn');
+  const resultEl = document.getElementById('result');
+  const urlInput = document.getElementById('urlInput');
+  const startInput = document.getElementById('startInput');
+  const endInput = document.getElementById('endInput');
+  const loopToggle = document.getElementById('loopToggle');
+
+  function appendLog(line){
+    if (logEl.textContent === '(waiting)') logEl.textContent = '';
+    logEl.textContent += line + '\n';
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+  function parseTime(str){
+    if(!str) return NaN;
+    const p = String(str).trim().split(':').map(x=>parseInt(x,10));
+    if(p.some(isNaN)) return NaN;
+    if(p.length===1) return p[0];
+    if(p.length===2) return p[0]*60 + p[1];
+    if(p.length===3) return p[0]*3600 + p[1]*60 + p[2];
+    return NaN;
+  }
+  function fmtHHMMSS(sec){
+    if(!isFinite(sec) || sec<0) sec = 0;
+    sec = Math.floor(sec);
+    const h = Math.floor(sec/3600);
+    const m = Math.floor((sec%3600)/60);
+    const s = sec%60;
+    return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  }
+  let player = null;
+  let loopTimer = null;
+  function extractYouTubeId(u){
+    if(!u) return null;
+    try{
+      const url = new URL(u);
+      if(url.hostname.includes('youtu.be')) return url.pathname.slice(1);
+      if(url.searchParams.get('v')) return url.searchParams.get('v');
+      if(url.pathname.startsWith('/embed/')) return url.pathname.split('/')[2];
+      if(url.pathname.startsWith('/shorts/')) return url.pathname.split('/')[2];
+    }catch(_){}
+    if(/^[A-Za-z0-9_\-]{11}$/.test(u.trim())) return u.trim();
+    return null;
+  }
+  function onYouTubeIframeAPIReady(){ tryLoadPreview(); }
+  function tryLoadPreview(){
+    const id = extractYouTubeId(urlInput.value);
+    if(!id) return;
+    if(player){
+      player.loadVideoById(id);
+    }else{
+      player = new YT.Player('ytplayer', {
+        videoId: id,
+        playerVars: { rel:0, modestbranding:1 },
+        events: { onReady: () => {}, onStateChange: onPlayerStateChange }
+      });
+    }
+  }
+  function onPlayerStateChange(){ toggleLoop(loopToggle && loopToggle.checked); }
+  function getNow(){ return player ? player.getCurrentTime() : 0; }
+  function seekDelta(d){
+    if(!player) return;
+    const t = Math.max(0, getNow() + d);
+    player.seekTo(t, true);
+  }
+  function togglePlay(){
+    if(!player) return;
+    const s = player.getPlayerState();
+    if(s === YT.PlayerState.PLAYING){ player.pauseVideo(); }
+    else { player.playVideo(); }
+  }
+  urlInput.addEventListener('change', tryLoadPreview);
+  urlInput.addEventListener('blur', tryLoadPreview);
+  urlInput.addEventListener('paste', () => setTimeout(tryLoadPreview, 50));
+  document.querySelectorAll('[data-seek]').forEach(btn=>{
+    btn.addEventListener('click', ()=>seekDelta(parseFloat(btn.dataset.seek)));
+  });
+  document.getElementById('togglePlay').addEventListener('click', togglePlay);
+  document.getElementById('setStart').addEventListener('click', ()=>{
+    startInput.value = fmtHHMMSS(getNow());
+    const s = parseTime(startInput.value), e = parseTime(endInput.value);
+    if(!isFinite(e) || e <= s) endInput.value = fmtHHMMSS(s + 15);
+  });
+  document.getElementById('setEnd').addEventListener('click', ()=>{
+    endInput.value = fmtHHMMSS(getNow());
+  });
+  document.getElementById('swapSE').addEventListener('click', ()=>{
+    const a = startInput.value, b = endInput.value;
+    startInput.value = b; endInput.value = a;
+  });
+  document.getElementById('clearSE').addEventListener('click', ()=>{
+    startInput.value = ''; endInput.value = '';
+  });
+  document.querySelectorAll('[data-qlen]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const s = parseTime(startInput.value);
+      if(isFinite(s)) endInput.value = fmtHHMMSS(s + parseInt(btn.dataset.qlen,10));
+      else{
+        const now = getNow();
+        startInput.value = fmtHHMMSS(now);
+        endInput.value = fmtHHMMSS(now + parseInt(btn.dataset.qlen,10));
+      }
+    });
+  });
+  function toggleLoop(on){
+    if(loopTimer){ clearInterval(loopTimer); loopTimer=null; }
+    if(!on) return;
+    loopTimer = setInterval(()=>{
+      if(!player) return;
+      const s = parseTime(startInput.value), e = parseTime(endInput.value);
+      if(!isFinite(s) || !isFinite(e) || e<=s) return;
+      const t = getNow();
+      if(t < s || t > e) player.seekTo(s, true);
+      if(player.getPlayerState() === YT.PlayerState.PLAYING && t >= e - 0.1){
+        player.seekTo(s, true);
+      }
+    }, 200);
+  }
+  if(loopToggle){ loopToggle.addEventListener('change', e=>toggleLoop(e.target.checked)); }
+  window.addEventListener('keydown',(ev)=>{
+    if (matchMedia('(hover: none)').matches) return;
+    const tag = (ev.target && ev.target.tagName || '').toLowerCase();
+    if(tag === 'input' || tag === 'textarea') return;
+    if(ev.key === 'j' || ev.key === 'J'){ seekDelta(-10); }
+    if(ev.key === 'l' || ev.key === 'L'){ seekDelta(10); }
+    if(ev.key === 'k' || ev.key === 'K'){ togglePlay(); }
+    if(ev.key === 's' || ev.key === 'S'){ document.getElementById('setStart').click(); }
+    if(ev.key === 'e' || ev.key === 'E'){ document.getElementById('setEnd').click(); }
+    if(ev.key === ','){ seekDelta(-0.5); }
+    if(ev.key === '.'){ seekDelta(0.5); }
+  });
+  document.getElementById('jobForm').addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    resultEl.innerHTML = '';
+    logEl.textContent = '(starting)…';
+    startBtn.disabled = true;
+    const s = parseTime(startInput.value), eT = parseTime(endInput.value);
+    if(isFinite(s) && isFinite(eT) && eT <= s){
+      const tmp = startInput.value; startInput.value = endInput.value; endInput.value = tmp;
+    }
+    const form = e.target;
+    const fd = new FormData(form);
+    fd.set('anim', fd.get('anim') ? 'true' : 'false');
+    fd.set('burn', document.getElementById('burn').checked ? 'true' : 'false');
+    try{
+      const res = await fetch(API_BASE + '/start', { method:'POST', body: fd });
+      if(!res.ok) throw new Error('Failed to start job');
+      const { job_id } = await res.json();
+      const es = new EventSource((API_BASE || '') + '/logs/' + job_id);
+      es.onmessage = (ev)=>{
+        if(!ev.data) return;
+        appendLog(ev.data);
+        if(ev.data.startsWith('DONE:')){
+          const fname = ev.data.slice(5);
+          const url = (API_BASE || '') + '/download/' + job_id + '/' + encodeURIComponent(fname);
+          resultEl.innerHTML = `<a class="dl" href="${url}">⬇ Download result</a>`;
+          es.close();
+          startBtn.disabled = false;
+        }
+        if(ev.data.startsWith('FAIL:')){
+          es.close();
+          startBtn.disabled = false;
+        }
+      };
+      es.onerror = ()=>{ appendLog('[log stream closed]'); };
+    }catch(err){
+      appendLog('[ERROR] ' + err.message);
+      startBtn.disabled = false;
+    }
+  });
+  window.addEventListener('load', ()=> setTimeout(tryLoadPreview, 300));
+</script>
+</body>
+</html>

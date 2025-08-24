@@ -1,0 +1,10 @@
+flask>=3.0.0
+flask-cors>=4.0.0
+yt-dlp>=2024.12.31
+faster-whisper>=1.0.0
+ctranslate2>=4.4.0
+numpy>=1.26
+regex>=2024.5.15
+aksharamukha>=2.2.0
+indic-transliteration>=2.5.0
+gunicorn>=21.2.0

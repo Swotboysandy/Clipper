@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: yt-auto-subs
+    env: docker
+    plan: starter
+    autoDeploy: true
+    disk:
+      name: data
+      mountPath: /data
+      sizeGB: 10
+    envVars:
+      - key: PORT
+        value: "7860"
+      - key: HF_HOME
+        value: /data/hf-cache
+      - key: JOBS_DIR
+        value: /data/jobs
+      - key: DEFAULT_MODEL
+        value: small

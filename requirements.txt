@@ -1,9 +1,16 @@
 Flask==3.0.3
 Flask-Cors==4.0.1
 gunicorn==21.2.0
-yt-dlp>=2024.04.09,<2025.0.0
-faster-whisper==1.0.3
-ctranslate2>=4.4.0
-numpy>=1.26
+
+# downloader / audio
+yt-dlp==2024.08.06
 regex>=2024.5.15
+
+# whisper stack
+faster-whisper==1.0.3
+ctranslate2==4.6.0
+numpy>=1.26,<3
+
+# optional romanization libs (safe pins for py311)
 aksharamukha>=2.2.0
+indic-transliteration==2.3.74

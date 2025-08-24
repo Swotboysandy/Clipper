@@ -19,7 +19,7 @@ os.environ.setdefault("HF_HUB_ENABLE_HF_TRANSFER", "1")  # if hf-transfer instal
 OUTPUT_W, OUTPUT_H = 720, 1280  # 9:16 target
 CROP_VF = f"crop=in_h*9/16:in_h,scale={OUTPUT_W}:{OUTPUT_H}"
 
-# Fonts (install these on your system if you use that script)
+# Fonts
 FONT_LATIN      = "Montserrat SemiBold"
 FONT_DEVANAGARI = "Noto Sans Devanagari"
 FONT_GURMUKHI   = "Noto Sans Gurmukhi"
@@ -184,11 +184,11 @@ def build_ass_dialogue(start: float, end: float, lines: List[str], fontname: str
         tags += f"\\fad({POP_MS},{FADE_MS})\\move({cx},{y1},{cx},{y2})"
         tags += f"\\t(0,{pop_cs},\\fscx110\\fscy110)\\t({pop_cs},{pop_cs+1},\\fscx100\\fscy100)"
     tags += "}"
-    body = r"\\N".join(sanitize_ass(l) for l in lines if l)
-    return f"Dialogue: 0,{sec_to_ass(start)},{sec_to_ass(end)},Sub,,0,0,0,,{tags}{body}\\n"
+    body = r"\N".join(sanitize_ass(l) for l in lines if l)
+    return f"Dialogue: 0,{sec_to_ass(start)},{sec_to_ass(end)},Sub,,0,0,0,,{tags}{body}\n"
 
 def build_ass_file(events: List[str], ass_path: Path):
-    header = f\"\"\"[Script Info]
+    header = f"""[Script Info]
 ScriptType: v4.00+
 PlayResX: {OUTPUT_W}
 PlayResY: {OUTPUT_H}
@@ -201,7 +201,7 @@ Style: Sub,{FONT_LATIN},{FONT_SIZE},{PRIMARY},&H00FFFFFF,{OUTLINE},&H66000000,-1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
-\"\"\"
+"""
     ass = header + "".join(events)
     ass_path.write_text(ass, encoding="utf-8")
 
@@ -323,7 +323,7 @@ def download_youtube(url: str, out_path: str, start: Optional[str], end: Optiona
             last_err = e
             qlog.put(f"[attempt failed] {e}")
 
-    raise last_err or RuntimeError("yt‑dlp failed with all strategies")
+    raise last_err or RuntimeError("yt-dlp failed with all strategies")
 
 def extract_clean_audio(in_video: str, out_wav: str, qlog: queue.Queue):
     cmd = [
@@ -426,7 +426,7 @@ def chunk_by_words(words: List[Dict], max_words=4) -> List[Tuple[float, float, s
         group = words[i:j]
         start = group[0]["start"]; end = group[-1]["end"]
         text = " ".join([w["word"] for w in group]).strip()
-        chunks.append((start, end, re.sub(r"\\s+", " ", text)))
+        chunks.append((start, end, re.sub(r"\s+", " ", text)))
         i = j
     return chunks
 
@@ -450,11 +450,18 @@ def make_events_from_asr(asr_segs: List[Dict], anim_enabled: bool, output_mode: 
             events.append(build_ass_dialogue(start, end, lines, font_for_text(text, output_mode), anim_enabled))
     return events
 
+# --- Windows path escaping for ffmpeg filter args ---
 def _escape_ffmpeg_filter_path(p: str) -> str:
+    """
+    Make a Windows-ish path safe inside ffmpeg -vf:
+      - use forward slashes
+      - escape drive colon as '\:'
+      - escape single quotes
+    """
     s = p.replace("\\", "/")
     if len(s) >= 2 and s[1] == ":":
-        s = s[0] + "\\:" + s[2:]
-    s = s.replace("'", r"\\'")
+        s = s[0] + "\\:" + s[2:]  # e.g. C:/... -> C\:/...
+    s = s.replace("'", r"\'")
     return s
 
 def burn_subs(input_video: str, ass_file: str, output_video: str, qlog: queue.Queue):
@@ -602,15 +609,15 @@ def stream_logs(job_id: str):
         while True:
             try:
                 line = qlog.get(timeout=0.5)
-                yield f"data: {line}\\n\\n"
+                yield f"data: {line}\n\n"
             except queue.Empty:
                 pass
             if JOBS[job_id]["done"]:
                 out_path = JOBS[job_id]["out_path"]
                 if out_path and Path(out_path).exists():
-                    yield f"data: DONE:{Path(out_path).name}\\n\\n"
+                    yield f"data: DONE:{Path(out_path).name}\n\n"
                 else:
-                    yield "data: FAIL: job ended with error\\n\\n"
+                    yield "data: FAIL: job ended with error\n\n"
                 break
     return Response(gen(), mimetype="text/event-stream", headers={
         "Cache-Control": "no-cache",

@@ -34,12 +34,7 @@
     -moz-osx-font-smoothing: grayscale;
   }
   .wrap{ max-width: min(1200px, 100%); margin: clamp(14px, 2vw, 28px) auto; padding: 0 clamp(10px, 2.4vw, 20px); }
-  h1{
-    margin: 0 0 clamp(10px, 1.2vw, 16px);
-    font-size: clamp(18px, 1.1rem + 0.7vw, 22px);
-    font-weight: 800;
-    letter-spacing: .2px;
-  }
+  h1{ margin: 0 0 clamp(10px, 1.2vw, 16px); font-size: clamp(18px, 1.1rem + 0.7vw, 22px); font-weight: 800; letter-spacing: .2px; }
   .card{
     background: linear-gradient(180deg, var(--card) 0%, var(--card-2) 100%);
     border: 1px solid var(--stroke);
@@ -53,15 +48,10 @@
     font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: .4px;
   }
   input[type="text"], input[type="url"], select{
-    width: 100%;
-    height: clamp(44px, 5.5vw, 48px);
-    border-radius: 12px;
-    border: 1px solid var(--stroke);
-    background: #091336;
-    color: var(--text);
-    padding: 10px 12px;
-    outline: none;
-    transition: border .15s, box-shadow .15s, background .15s;
+    width: 100%; height: clamp(44px, 5.5vw, 48px);
+    border-radius: 12px; border: 1px solid var(--stroke);
+    background: #091336; color: var(--text);
+    padding: 10px 12px; outline: none; transition: border .15s, box-shadow .15s, background .15s;
   }
   input::placeholder{ color: #8ea1da; }
   input:focus, select:focus{
@@ -75,6 +65,7 @@
   .row4{ grid-template-columns: repeat(4, 1fr); }
   @media (max-width: 980px){ .row4{ grid-template-columns: repeat(2, 1fr); } }
   @media (max-width: 760px){ .row3, .row2, .row4 { grid-template-columns: 1fr; } }
+
   .player-wrap{ display:grid; gap: 12px; }
   #playerContainer{
     aspect-ratio: 16 / 9;
@@ -84,119 +75,85 @@
     overflow: hidden;
     display:grid; place-items:center;
   }
-  .toolbar{
-    display:flex; align-items:center; gap: 10px; flex-wrap: wrap;
-  }
+
+  .toolbar{ display:flex; align-items:center; gap: 10px; flex-wrap: wrap; }
   @media (max-width: 760px){
-    .toolbar{
-      flex-wrap: nowrap;
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-      gap: 8px;
-      padding: 4px 8px;
-      margin: 0 -8px;
-    }
+    .toolbar{ flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; gap: 8px; padding: 4px 8px; margin: 0 -8px; }
     .toolbar::-webkit-scrollbar{ height: 6px; }
     .toolbar::-webkit-scrollbar-thumb{ background: #1d2a55; border-radius: 999px; }
   }
-  @media (max-width: 360px){
-    .toolbar{ flex-wrap: wrap; overflow-x: visible; margin: 0; padding: 0; }
-  }
-  .kbd{
-    font: 600 12px/1 "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    background:#091336; border:1px solid #2a3c77; border-radius:6px; padding:4px 6px; color:#dfe8ff;
-  }
+  @media (max-width: 360px){ .toolbar{ flex-wrap: wrap; overflow-x: visible; margin: 0; padding: 0; } }
+
+  .kbd{ font: 600 12px/1 "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    background:#091336; border:1px solid #2a3c77; border-radius:6px; padding:4px 6px; color:#dfe8ff; }
+
   .pill{
-    display:inline-flex; align-items:center; justify-content:center;
-    white-space: nowrap;
-    min-height: 38px;
-    padding: 8px 12px;
-    border-radius: 999px;
-    background: #0a1438;
-    border: 1px solid #2b3f80;
-    color: #f2f5ff;
-    font-weight: 800;
-    letter-spacing: .2px;
-    user-select: none;
-    cursor: pointer;
-    transition: transform .05s, background .15s, border .15s, box-shadow .15s, filter .1s;
+    display:inline-flex; align-items:center; justify-content:center; white-space: nowrap;
+    min-height: 38px; padding: 8px 12px; border-radius: 999px; background: #0a1438;
+    border: 1px solid #2b3f80; color: #f2f5ff; font-weight: 800; letter-spacing: .2px;
+    user-select: none; cursor: pointer; transition: transform .05s, background .15s, border .15s, box-shadow .15s, filter .1s;
   }
   .pill:hover{ background: #0f1b49; border-color:#3a57a8; }
   .pill:active{ transform: translateY(1px); }
-  .pill[aria-pressed="true"]{
-    background:#16266b; border-color:#4a73df;
-    box-shadow: inset 0 0 0 1px #2b4ec7;
-  }
-  @media (max-width: 760px){
-    .pill{ min-height: 36px; padding: 7px 11px; font-size: 0.96rem; }
-  }
+  .pill[aria-pressed="true"]{ background:#16266b; border-color:#4a73df; box-shadow: inset 0 0 0 1px #2b4ec7; }
+
+  @media (max-width: 760px){ .pill{ min-height: 36px; padding: 7px 11px; font-size: 0.96rem; } }
+
   .btn{
     background: linear-gradient(140deg, var(--accent), var(--accent-2));
-    color: #041027;
-    border: none;
-    border-radius: 12px;
-    padding: 12px 16px;
-    font-weight: 900;
-    letter-spacing: .3px;
-    cursor: pointer;
-    min-height: clamp(44px, 5.8vw, 50px);
-    box-shadow: 0 8px 24px rgba(105,163,255,.35);
-    transition: transform .06s, box-shadow .2s, filter .1s;
+    color: #041027; border: none; border-radius: 12px; padding: 12px 16px;
+    font-weight: 900; letter-spacing: .3px; cursor: pointer; min-height: clamp(44px, 5.8vw, 50px);
+    box-shadow: 0 8px 24px rgba(105,163,255,.35); transition: transform .06s, box-shadow .2s, filter .1s;
   }
   .btn:hover{ filter: brightness(1.05); box-shadow: 0 10px 28px rgba(105,163,255,.45); }
   .btn:active{ transform: translateY(1px); }
   .btn:disabled{ opacity: .6; cursor: not-allowed; }
-  .actions{ display:flex; gap: 12px; align-items:center; }
-  @media (max-width: 760px){
-    .actions{ position: sticky; bottom: 10px; z-index: 10; }
-    .actions .btn{ flex: 1; }
-  }
+
   pre{
     white-space: pre-wrap;
-    background: #091336;
-    border:1px solid var(--stroke);
-    color:#dfe6ff;
-    padding: 14px;
-    border-radius: 14px;
-    height: clamp(240px, 36vh, 320px);
-    overflow: auto;
+    background: #091336; border:1px solid var(--stroke); color:#dfe6ff;
+    padding: 14px; border-radius: 14px; height: clamp(240px, 36vh, 320px); overflow: auto;
   }
-  a.dl{
-    display:inline-block; margin-top:10px; color:#00171f;
-    background: var(--success);
-    padding: 10px 14px; border-radius: 12px; text-decoration:none; font-weight: 900;
-  }
+  a.dl{ display:inline-block; margin-top:10px; color:#00171f; background: var(--success);
+    padding: 10px 14px; border-radius: 12px; text-decoration:none; font-weight: 900; }
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>🎬 YouTube → Auto Subtitles (Hindi / Hinglish / English)</h1>
+
   <div class="card">
     <form id="jobForm">
       <label for="urlInput">YouTube URL</label>
       <input id="urlInput" type="url" inputmode="url" name="url" required placeholder="https://www.youtube.com/watch?v=..." />
+
       <div class="player-wrap" style="margin-top:8px">
         <div id="playerContainer"><div id="ytplayer" style="width:100%;height:100%"></div></div>
+
         <div class="toolbar" id="toolbar">
           <button class="pill" type="button" data-seek="-5">⟲ 5s</button>
           <button class="pill" type="button" data-seek="-1">⟲ 1s</button>
           <button class="pill" type="button" id="togglePlay">⏯ Play/Pause</button>
           <button class="pill" type="button" data-seek="1">↠ 1s</button>
           <button class="pill" type="button" data-seek="5">↠ 5s</button>
+
           <span style="margin-left:6px;color:var(--muted)">Pick:</span>
           <button class="pill" type="button" id="setStart">Set Start ⟵ Now</button>
           <button class="pill" type="button" id="setEnd">Set End ⟵ Now</button>
           <button class="pill" type="button" id="swapSE">Swap</button>
           <button class="pill" type="button" id="clearSE">Clear</button>
+
           <span style="margin-left:6px;color:var(--muted)">Quick length:</span>
           <button class="pill" type="button" data-qlen="10">+10s</button>
           <button class="pill" type="button" data-qlen="15">+15s</button>
           <button class="pill" type="button" data-qlen="20">+20s</button>
           <button class="pill" type="button" data-qlen="30">+30s</button>
+
           <label class="pill" style="display:flex;align-items:center;gap:8px">
             <input id="loopToggle" type="checkbox" />
             Loop selection
           </label>
+
           <span class="shortcuts" style="margin-left:auto;color:var(--muted)">
             Shortcuts:
             <span class="kbd">J</span> -10s
@@ -209,6 +166,7 @@
           </span>
         </div>
       </div>
+
       <div class="grid row2" style="margin-top:12px">
         <div>
           <label for="startInput">Start (HH:MM:SS)</label>
@@ -219,6 +177,7 @@
           <input id="endInput" type="text" name="end" placeholder="e.g. 00:03:05 (optional)" />
         </div>
       </div>
+
       <div class="grid row4" style="margin-top:6px">
         <div>
           <label>Model</label>
@@ -254,6 +213,7 @@
           </select>
         </div>
       </div>
+
       <div class="grid row3" style="margin-top:6px">
         <div>
           <label>Language hint</label>
@@ -273,37 +233,42 @@
           <input type="text" name="outbase" value="youtube_clip" />
         </div>
       </div>
+
       <div class="grid row2" style="margin-top:6px">
         <div>
           <label>Cookies (optional)</label>
           <input type="file" name="cookies" accept=".txt" />
           <div style="color:var(--muted)">If a video is age/region restricted, export cookies.txt from your browser.</div>
         </div>
-        <div style="display:flex;align-items:center;gap:10px;justify-content:flex-start;margin-top:26px;flex-wrap:wrap">
-          <label style="display:flex;align-items:center;gap:8px;margin:0">
+        <div style="display:flex;align-items:center;gap:16px;justify-content:flex-start;margin-top:26px;flex-wrap:wrap">
+          <label style="display:flex;align-items:center;gap:8px;margin:0;color:var(--text)">
             <input type="checkbox" name="anim" id="anim" checked />
-            Animate captions (CapCut style)
+            Animate captions
           </label>
-          <label style="display:flex;align-items:center;gap:8px;margin:0">
+          <label style="display:flex;align-items:center;gap:8px;margin:0;color:var(--text)">
             <input type="checkbox" name="burn" id="burn" checked />
-            Burn subtitles
+            Burn subtitles into video
           </label>
         </div>
       </div>
-      <div class="actions" style="margin-top:14px">
+
+      <div class="actions" style="margin-top:14px;display:flex;gap:12px;align-items:center">
         <button id="startBtn" type="submit" class="btn">Download & Generate</button>
         <span id="result"></span>
       </div>
     </form>
   </div>
+
   <div class="card">
     <label>Logs</label>
     <pre id="log">(waiting)</pre>
   </div>
 </div>
+
 <script src="https://www.youtube.com/iframe_api"></script>
 <script>
   const API_BASE = (location.protocol.startsWith('http')) ? '' : 'http://127.0.0.1:7860';
+
   const logEl = document.getElementById('log');
   const startBtn = document.getElementById('startBtn');
   const resultEl = document.getElementById('result');
@@ -311,12 +276,14 @@
   const startInput = document.getElementById('startInput');
   const endInput = document.getElementById('endInput');
   const loopToggle = document.getElementById('loopToggle');
+  const burnToggle = document.getElementById('burn');
 
   function appendLog(line){
     if (logEl.textContent === '(waiting)') logEl.textContent = '';
     logEl.textContent += line + '\n';
     logEl.scrollTop = logEl.scrollHeight;
   }
+
   function parseTime(str){
     if(!str) return NaN;
     const p = String(str).trim().split(':').map(x=>parseInt(x,10));
@@ -334,8 +301,11 @@
     const s = sec%60;
     return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
   }
+
+  // YouTube
   let player = null;
   let loopTimer = null;
+
   function extractYouTubeId(u){
     if(!u) return null;
     try{
@@ -348,6 +318,7 @@
     if(/^[A-Za-z0-9_\-]{11}$/.test(u.trim())) return u.trim();
     return null;
   }
+
   function onYouTubeIframeAPIReady(){ tryLoadPreview(); }
   function tryLoadPreview(){
     const id = extractYouTubeId(urlInput.value);
@@ -375,13 +346,16 @@
     if(s === YT.PlayerState.PLAYING){ player.pauseVideo(); }
     else { player.playVideo(); }
   }
+
   urlInput.addEventListener('change', tryLoadPreview);
   urlInput.addEventListener('blur', tryLoadPreview);
   urlInput.addEventListener('paste', () => setTimeout(tryLoadPreview, 50));
+
   document.querySelectorAll('[data-seek]').forEach(btn=>{
     btn.addEventListener('click', ()=>seekDelta(parseFloat(btn.dataset.seek)));
   });
   document.getElementById('togglePlay').addEventListener('click', togglePlay);
+
   document.getElementById('setStart').addEventListener('click', ()=>{
     startInput.value = fmtHHMMSS(getNow());
     const s = parseTime(startInput.value), e = parseTime(endInput.value);
@@ -408,6 +382,8 @@
       }
     });
   });
+
+  // Loop selection
   function toggleLoop(on){
     if(loopTimer){ clearInterval(loopTimer); loopTimer=null; }
     if(!on) return;
@@ -423,6 +399,8 @@
     }, 200);
   }
   if(loopToggle){ loopToggle.addEventListener('change', e=>toggleLoop(e.target.checked)); }
+
+  // Keyboard shortcuts (desktop only)
   window.addEventListener('keydown',(ev)=>{
     if (matchMedia('(hover: none)').matches) return;
     const tag = (ev.target && ev.target.tagName || '').toLowerCase();
@@ -435,23 +413,29 @@
     if(ev.key === ','){ seekDelta(-0.5); }
     if(ev.key === '.'){ seekDelta(0.5); }
   });
+
+  // Submit & logs
   document.getElementById('jobForm').addEventListener('submit', async (e)=>{
     e.preventDefault();
     resultEl.innerHTML = '';
     logEl.textContent = '(starting)…';
     startBtn.disabled = true;
+
     const s = parseTime(startInput.value), eT = parseTime(endInput.value);
     if(isFinite(s) && isFinite(eT) && eT <= s){
       const tmp = startInput.value; startInput.value = endInput.value; endInput.value = tmp;
     }
+
     const form = e.target;
     const fd = new FormData(form);
     fd.set('anim', fd.get('anim') ? 'true' : 'false');
-    fd.set('burn', document.getElementById('burn').checked ? 'true' : 'false');
+    fd.set('burn', burnToggle && burnToggle.checked ? 'true' : 'false');
+
     try{
       const res = await fetch(API_BASE + '/start', { method:'POST', body: fd });
       if(!res.ok) throw new Error('Failed to start job');
       const { job_id } = await res.json();
+
       const es = new EventSource((API_BASE || '') + '/logs/' + job_id);
       es.onmessage = (ev)=>{
         if(!ev.data) return;
@@ -474,6 +458,7 @@
       startBtn.disabled = false;
     }
   });
+
   window.addEventListener('load', ()=> setTimeout(tryLoadPreview, 300));
 </script>
 </body>

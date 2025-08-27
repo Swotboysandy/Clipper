@@ -7,7 +7,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN python -m pip install --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
@@ -20,5 +21,4 @@ ENV DEFAULT_MODEL=small
 
 RUN mkdir -p /tmp/hf /tmp/jobs
 
-# single CMD (don’t put two)
 CMD gunicorn -k gthread -w 1 -t 0 -b 0.0.0.0:$PORT app:app

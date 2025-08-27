@@ -47,7 +47,7 @@ STALL_TIMEOUT_SEC = int(os.getenv("STALL_TIMEOUT_SEC", "300"))
 app = Flask(__name__, static_folder=None)
 CORS(app, resources={r"/*": {"origins": "*"}})
 BASE_DIR = Path(__file__).parent.resolve()
-JOBS_DIR = BASE_DIR / "jobs"
+JOBS_DIR = Path(os.getenv("JOBS_DIR", str(BASE_DIR / "jobs")))
 JOBS_DIR.mkdir(exist_ok=True)
 JOBS: Dict[str, Dict] = {}
 

@@ -5,13 +5,13 @@ from flask import Flask, request, jsonify, Response, send_from_directory
 from flask_cors import CORS
 
 # ============================================================
-# Boot hardening + cookie init (HF/Koyeb/Spaces friendly)
+# Boot hardening + cookie init
 # ============================================================
 
 def _init_cookies_from_env():
     """
-    If COOKIES_B64 is provided (e.g., in Koyeb/Spaces env),
-    decode it to /tmp/cookies.txt and set COOKIES_PATH so the app uses it.
+    If COOKIES_B64 is provided (e.g., on Koyeb/Render/Spaces),
+    decode it to /tmp/cookies.txt and point COOKIES_PATH to it.
     """
     b64 = os.getenv("COOKIES_B64", "").strip()
     if not b64:
@@ -26,16 +26,13 @@ def _init_cookies_from_env():
         print(f"[cookies:init] failed: {e}")
 
 def _harden_dns():
-    """
-    Best-effort: set working resolvers in container and enable DNS-over-TCP fallback.
-    Safe to run even if it can't write (non-root).
-    """
+    """Set good resolvers and enable DNS-over-TCP fallback (best-effort)."""
     try:
-        # Force good resolvers (Cloudflare + Google)
-        Path("/etc/resolv.conf").write_text("nameserver 1.1.1.1\nnameserver 8.8.8.8\n", encoding="utf-8")
+        Path("/etc/resolv.conf").write_text(
+            "nameserver 1.1.1.1\nnameserver 8.8.8.8\n", encoding="utf-8"
+        )
     except Exception:
         pass
-    # Force resolver to try TCP ('use-vc'), keep retries small to fail fast in logs
     os.environ.setdefault("RES_OPTIONS", "use-vc attempts:2 timeout:3")
 
 _init_cookies_from_env()
@@ -46,7 +43,6 @@ os.environ.setdefault("HF_HUB_READ_TIMEOUT", "60")
 os.environ.setdefault("HF_HUB_ENABLE_HF_TRANSFER", "1")
 
 PROXY = os.getenv("PROXY", "").strip()
-COOKIES_PATH_ENV = os.getenv("COOKIES_PATH", "").strip()
 
 LAYOUTS = {
     "original_16x9": {"w": 1920, "h": 1080, "vf": "scale=-2:1080", "margin_v": 90},
@@ -54,7 +50,6 @@ LAYOUTS = {
 }
 
 FONT_LATIN      = "Montserrat SemiBold"
-# Use env var FONTS_DIR (e.g., ship TTFs in ./fonts). Falls back to skipping fontsdir.
 FONT_DEVANAGARI = "Noto Sans Devanagari"
 FONT_GURMUKHI   = "Noto Sans Gurmukhi"
 FONT_DEVANAGARI_PATH_DIR = os.getenv("FONTS_DIR", str(Path(__file__).parent / "fonts"))
@@ -94,16 +89,23 @@ def _select_cookies_file(job_cookies: Optional[Path]) -> Optional[Path]:
     """
     Preference order:
       1) Uploaded per-job cookies file
-      2) COOKIES_PATH env (possibly populated by COOKIES_B64)
-      3) ./cookies.txt next to app.py
+      2) COOKIES_PATH env (possibly created from COOKIES_B64)
+      3) ./cookies/cookies.txt bundled with the app
+      4) ./cookies.txt next to app.py
     """
     if job_cookies and Path(job_cookies).exists():
         return Path(job_cookies)
+
     env_path = os.getenv("COOKIES_PATH", "").strip()
     if env_path:
         p = Path(env_path)
         if p.exists():
             return p
+
+    bundled = BASE_DIR / "cookies" / "cookies.txt"
+    if bundled.exists():
+        return bundled
+
     local = BASE_DIR / "cookies.txt"
     return local if local.exists() else None
 
@@ -550,12 +552,13 @@ def job_worker(job_id: str, form: Dict):
         suffix   = "raw" if raw_download else ("final" if burn else "nosubs")
         out_path = str((workdir / f"{outbase}_{suffix}_{layout}{out_ext}").resolve())
 
+        # --- cookies ---
         cookies_from_request = job.get("cookies")
         cookies_file = _select_cookies_file(cookies_from_request)
         if cookies_file:
             qlog.put(f"[cookies] Using cookies file: {cookies_file}")
         else:
-            qlog.put("[cookies] None found — YouTube may block; upload cookies or set COOKIES_B64.")
+            qlog.put("[cookies] None found — YouTube may challenge you; upload cookies or set COOKIES_B64.")
 
         # Probe & detect live
         meta = _probe_formats(url, cookies_file, qlog)
@@ -571,7 +574,6 @@ def job_worker(job_id: str, form: Dict):
             qlog.put("[live] Starting live capture…")
             download_live(url, dl_path, cookies_file, qlog, fmt_force, container, live_from_start, live_seconds)
 
-            # Optional post-trim for live if Start/End present
             trimmed_path = dl_path
             if start and end:
                 live_trim_path = str((workdir / f"{outbase}.trim{out_ext}").resolve())

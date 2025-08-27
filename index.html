@@ -78,7 +78,29 @@
     font-weight:800; font-size: clamp(20px,2.2vw,28px);
     letter-spacing:.2px
   }
-
+ #progress {
+    position: relative;
+    width: 100%;
+    max-width: 480px;
+    height: 14px;
+    background: #e5e7eb;
+    border-radius: 999px;
+    overflow: hidden;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,.1);
+  }
+  #progress-bar {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #22c55e, #16a34a);
+    transition: width .15s ease;
+  }
+  #progress-label {
+    position: absolute;
+    top: -26px;
+    right: 0;
+    font: 600 12px/1 system-ui, -apple-system, Segoe UI, Roboto, Arial;
+    color: #111827;
+  }
   /* Theme switcher */
   .theme-switch{
     display:flex; align-items:center; gap:8px;
@@ -383,7 +405,10 @@
       </div>
     </form>
   </div>
-
+<div id="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+  <div id="progress-bar"></div>
+  <span id="progress-label">0%</span>
+</div>
   <div class="card">
     <label>Logs</label>
     <pre id="log">(waiting)</pre>
@@ -568,7 +593,15 @@
       es.onerror = ()=> appendLog('[log stream closed]');
     }catch(err){ appendLog('[ERROR] ' + err.message); startBtn.disabled = false; }
   });
-
+ function setProgress(p) {
+    const v = Math.max(0, Math.min(100, Math.floor(p)));
+    const bar = document.getElementById('progress-bar');
+    const wrap = document.getElementById('progress');
+    const label = document.getElementById('progress-label');
+    bar.style.width = v + '%';
+    wrap.setAttribute('aria-valuenow', String(v));
+    label.textContent = v + '%';
+  }
   // Player boot
   window.addEventListener('load', ()=> setTimeout(tryLoadPreview, 300));
 </script>

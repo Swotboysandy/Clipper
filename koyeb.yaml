@@ -1,0 +1,31 @@
+# koyeb.yaml
+# Koyeb App Definition for Free Plan
+
+name: youtube-clipper-app
+
+services:
+  - name: web
+    type: web
+    env: python
+    build:
+      # Install your Python dependencies
+      # Make sure you have requirements.txt in repo
+      build_command: pip install -r requirements.txt
+    run:
+      # Run your Flask app (make sure PORT env is used)
+      command: python app.py
+      env:
+        - key: PORT
+          value: "8080"   # Koyeb exposes your service on 8080 internally
+        - key: HF_HUB_READ_TIMEOUT
+          value: "60"
+        - key: HF_HUB_ENABLE_HF_TRANSFER
+          value: "1"
+        # Optional: if you use cookies, set your base64 here via Koyeb Secrets
+        - key: COOKIES_B64
+          value: ""   # add via Secrets panel, not directly in git
+
+    # Deploy on the free instance
+    instance_type: free
+    regions:
+      - europe  # you can choose from: europe, singapore, dallas, etc.

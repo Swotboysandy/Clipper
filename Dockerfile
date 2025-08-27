@@ -8,9 +8,9 @@ ENV PIP_NO_CACHE_DIR=1 \
     JOBS_DIR=/tmp/clipper_jobs \
     DEFAULT_MODEL=small \
     DEFAULT_DEVICE=cpu \
-    DEFAULT_COMPUTE_CPU=int8
+    DEFAULT_COMPUTE_CPU=int8 \
+    PORT=7860   # default for local runs; Koyeb overrides it
 
-# Only the runtime libs we need (ffmpeg)
 RUN apt-get update \
  && apt-get install -y --no-install-recommends ffmpeg ca-certificates curl \
  && rm -rf /var/lib/apt/lists/*
@@ -20,8 +20,7 @@ COPY requirements.txt .
 RUN pip install --upgrade pip \
  && pip install --no-cache-dir -r requirements.txt
 
-# Copy app
 COPY . .
 
-# Koyeb exposes $PORT
-CMD ["gunicorn","app:app","--bind","0.0.0.0:${PORT}","--timeout","180","--workers","1","--threads","8"]
+# Use shell so $PORT expands; fall back to 7860 if not set
+CMD ["sh","-c","exec gunicorn app:app --bind 0.0.0.0:${PORT:-7860} --timeout 180 --workers 1 --threads 8"]

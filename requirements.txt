@@ -1,8 +1,7 @@
 Flask==3.0.3
-Flask-Cors==4.0.1
-yt-dlp==2025.1.26
+flask-cors==4.0.1
 faster-whisper==1.0.3
-indic-transliteration==2.3.74
 numpy
-ctranslate2
-gunicorn
+tokenizers
+indic-transliteration
+aksharamukha

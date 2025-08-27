@@ -1,8 +1,27 @@
-import os, re, json, uuid, threading, time, queue, subprocess
+import os, re, json, uuid, threading, time, queue, subprocess, socket
 from pathlib import Path
 from typing import List, Dict, Tuple, Optional
 from flask import Flask, request, jsonify, Response, send_from_directory
 from flask_cors import CORS
+
+# ============================================================
+# Render-friendly boot hardening (DNS + env)
+# ============================================================
+
+def _harden_dns():
+    """
+    Best-effort: set working resolvers in container and enable DNS-over-TCP fallback.
+    Safe to run even if it can't write (non-root).
+    """
+    try:
+        # Force good resolvers (Cloudflare + Google)
+        Path("/etc/resolv.conf").write_text("nameserver 1.1.1.1\nnameserver 8.8.8.8\n", encoding="utf-8")
+    except Exception:
+        pass
+    # Force resolver to try TCP ('use-vc'), keep retries small to fail fast in logs
+    os.environ.setdefault("RES_OPTIONS", "use-vc attempts:2 timeout:3")
+
+_harden_dns()
 
 # ---------------- Env & constants ----------------
 os.environ.setdefault("HF_HUB_READ_TIMEOUT", "60")
@@ -17,9 +36,10 @@ LAYOUTS = {
 }
 
 FONT_LATIN      = "Montserrat SemiBold"
+# Use env var FONTS_DIR (e.g., ship TTFs in ./fonts). Falls back to skipping fontsdir.
 FONT_DEVANAGARI = "Noto Sans Devanagari"
 FONT_GURMUKHI   = "Noto Sans Gurmukhi"
-FONT_DEVANAGARI_PATH_DIR = r"C:\Users\sunny\Downloads\Noto_Sans_Devanagari"
+FONT_DEVANAGARI_PATH_DIR = os.getenv("FONTS_DIR", str(Path(__file__).parent / "fonts"))
 
 FONT_SIZE = 52
 BORDER = 3
@@ -35,10 +55,10 @@ IN_BOUNCE_PIXELS = 28
 MAX_WORDS_PER_LINE = 4
 MAX_CHARS_PER_LINE = 22
 
-DEFAULT_MODEL = "large-v3"
-DEFAULT_DEVICE = "cpu"
-DEFAULT_COMPUTE_CPU = "int8"
-DEFAULT_COMPUTE_GPU = "float16"
+DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "large-v3")
+DEFAULT_DEVICE = os.getenv("DEFAULT_DEVICE", "cpu")
+DEFAULT_COMPUTE_CPU = os.getenv("DEFAULT_COMPUTE_CPU", "int8")
+DEFAULT_COMPUTE_GPU = os.getenv("DEFAULT_COMPUTE_GPU", "float16")
 
 HARD_TIMEOUT_SEC  = int(os.getenv("HARD_TIMEOUT_SEC", "900"))
 STALL_TIMEOUT_SEC = int(os.getenv("STALL_TIMEOUT_SEC", "300"))
@@ -51,22 +71,23 @@ JOBS_DIR = Path(os.getenv("JOBS_DIR", str(BASE_DIR / "jobs")))
 JOBS_DIR.mkdir(exist_ok=True)
 JOBS: Dict[str, Dict] = {}
 
-
-# After: BASE_DIR = Path(__file__).parent.resolve()
-# Add this small block to materialize cookies from env if present:
-b64 = os.getenv("COOKIES_B64", "").strip()
-cookies_env_path = os.getenv("COOKIES_PATH", "/tmp/cookies.txt").strip()
-if b64:
-    try:
-        from base64 import b64decode
-        p = Path(cookies_env_path)
-        p.parent.mkdir(parents=True, exist_ok=True)
-        p.write_bytes(b64decode(b64))
-        # Let the existing code discover it via COOKIES_PATH or local path
-        os.environ["COOKIES_PATH"] = str(p)
-    except Exception as e:
-        print("[cookies] Failed to write cookies from COOKIES_B64:", e)
-
+# ---------------- Cookies selector (single source of truth) ---------------
+def _select_cookies_file(job_cookies: Optional[Path]) -> Optional[Path]:
+    """
+    Preference order:
+      1) Uploaded per-job cookies file
+      2) COOKIES_PATH env
+      3) ./cookies.txt next to app.py
+    """
+    if job_cookies and Path(job_cookies).exists():
+        return Path(job_cookies)
+    env_path = os.getenv("COOKIES_PATH", "").strip()
+    if env_path:
+        p = Path(env_path)
+        if p.exists():
+            return p
+    local = BASE_DIR / "cookies.txt"
+    return local if local.exists() else None
 
 # -------------- (Optional) transliteration --------------
 _has_aksh = False
@@ -236,7 +257,7 @@ def cut_video(src: str, dst: str, start: Optional[str], end: Optional[str], qlog
 
 def _probe_formats(url: str, cookies: Optional[Path], qlog: queue.Queue) -> dict:
     cmd = ["yt-dlp","-J","--no-warnings"]
-    if cookies and cookies.exists(): cmd += ["--cookies", str(cookies)]
+    if cookies and Path(cookies).exists(): cmd += ["--cookies", str(cookies)]
     if PROXY: cmd += ["--proxy", PROXY]
     cmd += [url]
     try:
@@ -276,7 +297,7 @@ def _make_ytdlp_cmd(url: str, out_path: str, cookies: Optional[Path],
     ]
     if live_from_start: cmd.append("--live-from-start")
     if PROXY: cmd += ["--proxy", PROXY]
-    if cookies and cookies.exists(): cmd += ["--cookies", str(cookies)]
+    if cookies and Path(cookies).exists(): cmd += ["--cookies", str(cookies)]
     if use_sections and start and end: cmd += ["--download-sections", f"*{start}-{end}"]
     cmd += [url]
     return cmd
@@ -291,11 +312,9 @@ def build_ytdlp_format(quality: str, container: str) -> str:
     return f"{v_pref}+{a_pref}/{b_pref}/best"
 
 def is_live_from_meta_or_url(meta: dict, url: str) -> bool:
-    # Strong hints from meta
     if meta.get("is_live"): return True
     ls = (meta.get("live_status") or "").lower()
     if ls in {"is_live","is_upcoming"}: return True
-    # Fallback by URL pattern
     return "/live/" in url
 
 def _yt_dlp_version(qlog: queue.Queue):
@@ -469,14 +488,6 @@ def render_no_subs(input_video: str, output_video: str, qlog: queue.Queue, vf_cl
     run_streamed(cmd, qlog, "ffmpeg (render no-subs)")
 
 # ---------------- Job worker ----------------
-def _select_cookies_file(job_cookies: Optional[Path]) -> Optional[Path]:
-    if job_cookies and job_cookies.exists(): return job_cookies
-    if COOKIES_PATH_ENV:
-        p = Path(COOKIES_PATH_ENV)
-        if p.exists(): return p
-    local = BASE_DIR / "cookies.txt"
-    return local if local.exists() else None
-
 def job_worker(job_id: str, form: Dict):
     job = JOBS[job_id]; qlog: queue.Queue = job["queue"]; workdir: Path = job["workdir"]
     try:
@@ -538,8 +549,6 @@ def job_worker(job_id: str, form: Dict):
         # ---------- LIVE ----------
         if is_live:
             qlog.put("[live] Starting live capture…")
-            # If user supplied Start/End in live, we will post-trim after recording.
-            # Ensure we at least record long enough; UI tries to set it, but if not, we don't block.
             download_live(url, dl_path, cookies_file, qlog, fmt_force, container, live_from_start, live_seconds)
 
             # Optional post-trim for live if Start/End present
@@ -615,6 +624,23 @@ def job_worker(job_id: str, form: Dict):
 @app.get("/health")
 def health(): return {"ok": True}
 
+@app.get("/diag")
+def diag():
+    """Quick DNS/egress sanity for Render."""
+    r = {"port": os.getenv("PORT"),
+         "ip_youtube": None,
+         "curl_youtube_head": None}
+    try:
+        r["ip_youtube"] = socket.gethostbyname("www.youtube.com")
+    except Exception as e:
+        r["ip_youtube"] = f"DNS-ERR: {e}"
+    try:
+        out = subprocess.check_output(["curl","-I","https://www.youtube.com"], text=True, timeout=10)
+        r["curl_youtube_head"] = out.splitlines()[0]
+    except Exception as e:
+        r["curl_youtube_head"] = f"CURL-ERR: {e}"
+    return r
+
 @app.post("/start")
 def start_job():
     form = request.form.to_dict()
@@ -663,5 +689,10 @@ def root():
 @app.get("/favicon.ico")
 def favicon(): return "", 204
 
+# ---------------- Main (Render bind to $PORT) ----------------
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=7860, debug=False)
+    host = "0.0.0.0"
+    port = int(os.getenv("PORT", "7860"))
+    # final attempt to enforce DNS on boot
+    _harden_dns()
+    app.run(host=host, port=port, debug=False)

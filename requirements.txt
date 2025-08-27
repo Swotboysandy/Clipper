@@ -1,10 +1,7 @@
 flask
 flask-cors
+gunicorn
 yt-dlp
 faster-whisper
-numpy
-torch
-soundfile
-ffmpeg-python
 aksharamukha
 indic-transliteration

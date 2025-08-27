@@ -1,0 +1,17 @@
+.git
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+*.mp4
+*.mkv
+*.ass
+jobs/
+data/
+tmp/
+.cache/
+hf-cache/
+.hf-cache/
+venv/
+.env

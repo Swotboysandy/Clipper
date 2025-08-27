@@ -1,22 +1,27 @@
-FROM python:3.10-slim
+# Small base
+FROM python:3.11-slim-bookworm
 
-# System deps (ffmpeg is required by your app)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    ffmpeg curl ca-certificates && \
-    rm -rf /var/lib/apt/lists/*
-
-# Env defaults (safe for small instances)
-ENV DEFAULT_MODEL=small \
-    DEFAULT_DEVICE=cpu \
-    DEFAULT_COMPUTE_CPU=int8 \
+ENV PIP_NO_CACHE_DIR=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
     HF_HOME=/tmp/hf-cache \
-    JOBS_DIR=/tmp/clipper_jobs
+    JOBS_DIR=/tmp/clipper_jobs \
+    DEFAULT_MODEL=small \
+    DEFAULT_DEVICE=cpu \
+    DEFAULT_COMPUTE_CPU=int8
+
+# Only the runtime libs we need (ffmpeg)
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends ffmpeg ca-certificates curl \
+ && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --upgrade pip \
+ && pip install --no-cache-dir -r requirements.txt
 
+# Copy app
 COPY . .
 
-# Koyeb sets $PORT at runtime. We bind to it via CMD.
-CMD ["bash", "-lc", "gunicorn app:app --bind 0.0.0.0:$PORT --timeout 180 --workers 1 --threads 8"]
+# Koyeb exposes $PORT
+CMD ["gunicorn","app:app","--bind","0.0.0.0:${PORT}","--timeout","180","--workers","1","--threads","8"]

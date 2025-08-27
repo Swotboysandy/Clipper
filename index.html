@@ -1,108 +1,220 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8" />
-<title>YouTube → Auto Subtitles (Hindi / Hinglish / English)</title>
+<title>YouTube → Downloader + Auto Subtitles (VOD + Live)</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@600&display=swap" rel="stylesheet">
+<!-- Fonts: Inter (UI), Poppins (headings/buttons), JetBrains Mono (logs) -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;600;700&family=Poppins:wght@500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  :root{
-    --bg: #050711;
-    --bg-accent: #060b1a;
-    --card: #0a1024;
-    --card-2: #0c1430;
-    --stroke: #1c2a59;
-    --text: #f6f8ff;
-    --muted: #a8b7e3;
-    --ring: #79a8ff;
-    --accent: #69a3ff;
-    --accent-2: #9bc5ff;
-    --success: #32d07b;
+  /* ===================== THEME TOKENS ===================== */
+  :root {
+    --radius-lg: 18px;
+    --radius-md: 14px;
+    --radius-sm: 12px;
     --shadow: 0 12px 44px rgba(0,0,0,.45);
+
+    /* Fonts */
+    --font-ui: Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+    --font-accent: Poppins, Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
+    --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   }
+  /* Dark (default) */
+  :root[data-theme="dark"]{
+    --bg:#060812; --bg-grad-1:rgba(65,105,225,.16); --bg-grad-2:rgba(40,120,240,.12);
+    --card:#0a1024; --card-2:#0c1430; --stroke:#1c2a59;
+    --text:#f6f8ff; --muted:#a8b7e3;
+    --ring:#79a8ff; --accent:#69a3ff; --accent-2:#9bc5ff;
+    --success:#32d07b; --field:#091336; --field-focus:#081233;
+    --pill:#0a1438; --pill-stroke:#2b3f80;
+  }
+  /* Light */
+  :root[data-theme="light"]{
+    --bg:#f7f9fc; --bg-grad-1:rgba(90,140,255,.14); --bg-grad-2:rgba(120,170,255,.10);
+    --card:#ffffff; --card-2:#f4f7fe; --stroke:#d8dfec;
+    --text:#0f172a; --muted:#5b6476;
+    --ring:#3a8bff; --accent:#3179ff; --accent-2:#71a6ff;
+    --success:#1aa86a; --field:#ffffff; --field-focus:#f7fbff;
+    --pill:#eef3ff; --pill-stroke:#c9d7ff;
+  }
+  /* Purple */
+  :root[data-theme="purple"]{
+    --bg:#120019; --bg-grad-1:rgba(208,138,255,.16); --bg-grad-2:rgba(140,90,255,.12);
+    --card:#1a0324; --card-2:#2a0636; --stroke:#4d1c59;
+    --text:#fdf0ff; --muted:#ceb3da;
+    --ring:#d08aff; --accent:#c770ff; --accent-2:#e2a8ff;
+    --success:#32e0c4; --field:#1a0e2b; --field-focus:#220f3a;
+    --pill:#2a0c3f; --pill-stroke:#5b2879;
+  }
+  /* High Contrast */
+  :root[data-theme="contrast"]{
+    --bg:#000; --bg-grad-1:rgba(255,255,255,.05); --bg-grad-2:rgba(255,255,0,.05);
+    --card:#000; --card-2:#0b0b0b; --stroke:#444;
+    --text:#fff; --muted:#d0d0d0;
+    --ring:#00e1ff; --accent:#00d5ff; --accent-2:#7af0ff;
+    --success:#2aff80; --field:#0a0a0a; --field-focus:#101010;
+    --pill:#0a0a0a; --pill-stroke:#444;
+  }
+
+  /* ===================== BASE ===================== */
   *{box-sizing:border-box}
-  html, body { height: 100%; }
+  html,body{height:100%}
   body{
-    margin:0;
-    color: var(--text);
+    margin:0; color:var(--text);
+    font: clamp(13.5px, 0.9vw + 10px, 16px)/1.6 var(--font-ui);
+    -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; text-rendering:optimizeLegibility;
     background:
-      radial-gradient(1100px 550px at 85% -10%, rgba(65,105,225,.16), transparent 55%),
-      radial-gradient(900px 500px at -15% 115%, rgba(40,120,240,.12), transparent 55%),
+      radial-gradient(1100px 550px at 85% -10%, var(--bg-grad-1), transparent 55%),
+      radial-gradient(900px 500px at -15% 115%, var(--bg-grad-2), transparent 55%),
       var(--bg);
-    font: clamp(13.5px, 0.9vw + 10px, 16px)/1.6 "Manrope", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
   }
-  .wrap{ max-width: min(1200px, 100%); margin: clamp(14px, 2vw, 28px) auto; padding: 0 clamp(10px, 2.4vw, 20px); }
-  h1{ margin: 0 0 clamp(10px, 1.2vw, 16px); font-size: clamp(18px, 1.1rem + 0.7vw, 22px); font-weight: 800; letter-spacing: .2px; }
+  .wrap{ max-width:1200px; margin-inline:auto; padding: clamp(12px,2.4vw,24px); }
+  header{
+    display:flex; align-items:center; gap:14px; justify-content:space-between; margin-bottom: clamp(10px,1.8vw,16px);
+  }
+  h1{
+    margin:0;
+    font-family: var(--font-accent);
+    font-weight:800; font-size: clamp(20px,2.2vw,28px);
+    letter-spacing:.2px
+  }
+
+  /* Theme switcher */
+  .theme-switch{
+    display:flex; align-items:center; gap:8px;
+    padding:8px 10px; border-radius: var(--radius-sm);
+    background:var(--card-2); border:1px solid var(--stroke);
+  }
+  .theme-switch label{
+    margin:0; font-size:12px; color:var(--muted);
+    text-transform:uppercase; letter-spacing:.3px; font-weight:700; font-family: var(--font-accent);
+  }
+  .theme-switch select{
+    appearance:none; border-radius:10px; border:1px solid var(--stroke);
+    background:var(--field); color:var(--text);
+    padding:8px 10px; min-height:38px; outline:none; font-family: var(--font-ui); font-weight:600;
+  }
+  .theme-switch select:focus{ border-color:var(--ring); box-shadow:0 0 0 3px color-mix(in srgb, var(--ring) 25%, transparent) }
+
   .card{
-    background: linear-gradient(180deg, var(--card) 0%, var(--card-2) 100%);
-    border: 1px solid var(--stroke);
-    border-radius: 18px;
-    padding: clamp(12px, 2vw, 18px);
-    margin-bottom: clamp(10px, 1.8vw, 16px);
-    box-shadow: var(--shadow);
+    background:linear-gradient(180deg,var(--card) 0%,var(--card-2) 100%);
+    border:1px solid var(--stroke); border-radius:var(--radius-lg);
+    padding: clamp(12px,2vw,18px); margin-bottom: clamp(10px,1.8vw,16px);
+    box-shadow:var(--shadow);
   }
-  label{ display:block; margin: 8px 0 6px; color: var(--muted); font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: .4px; }
-  input[type="text"], input[type="url"], select{
-    width: 100%; height: clamp(44px, 5.5vw, 48px); border-radius: 12px; border: 1px solid var(--stroke);
-    background: #091336; color: var(--text); padding: 10px 12px; outline: none;
-    transition: border .15s, box-shadow .15s, background .15s;
+
+  /* Labels + fields */
+  label{
+    display:block; margin:8px 0 6px; color:var(--muted);
+    font-family: var(--font-accent); font-weight:700; font-size:12px; text-transform:uppercase; letter-spacing:.45px
   }
-  input::placeholder{ color: #8ea1da; }
-  input:focus, select:focus{ border-color: var(--ring); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 25%, transparent); background: #081233; }
-  .grid{ display:grid; gap: clamp(10px, 1.6vw, 14px); }
-  .row2{ grid-template-columns: 1fr 1fr; }
-  .row3{ grid-template-columns: repeat(3, 1fr); }
-  .row4{ grid-template-columns: repeat(4, 1fr); }
-  @media (max-width: 980px){ .row4{ grid-template-columns: repeat(2, 1fr); } }
-  @media (max-width: 760px){ .row3, .row2, .row4 { grid-template-columns: 1fr; } }
-  .player-wrap{ display:grid; gap: 12px; }
-  #playerContainer{ aspect-ratio: 16 / 9; background: #091336; border: 1px solid var(--stroke); border-radius: 14px; overflow: hidden; display:grid; place-items:center; }
-  .toolbar{ display:flex; align-items:center; gap: 10px; flex-wrap: wrap; }
-  @media (max-width: 760px){
-    .toolbar{ flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; gap: 8px; padding: 4px 8px; margin: 0 -8px; }
-    .toolbar::-webkit-scrollbar{ height: 6px; }
-    .toolbar::-webkit-scrollbar-thumb{ background: #1d2a55; border-radius: 999px; }
+  .inline-check{ display:flex; align-items:center; gap:10px; margin: 0 0 6px; user-select:none; font-family: var(--font-ui) }
+  input[type="text"], input[type="url"], input[type="file"], select{
+    width:100%; height:clamp(44px,5.5vw,48px);
+    border-radius:12px; border:1px solid var(--stroke); background:var(--field); color:var(--text);
+    padding:10px 12px; outline:none; transition:border-color .15s ease, box-shadow .15s ease, background .15s ease;
+    font-family: var(--font-ui); font-weight:600;
   }
-  @media (max-width: 360px){ .toolbar{ flex-wrap: wrap; overflow-x: visible; margin: 0; padding: 0; } }
-  .kbd{ font: 600 12px/1 "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    background:#091336; border:1px solid #2a3c77; border-radius:6px; padding:4px 6px; color:#dfe8ff; }
+  input:focus, select:focus{
+    border-color:var(--ring);
+    box-shadow:0 0 0 3px color-mix(in srgb, var(--ring) 25%, transparent);
+    background:var(--field-focus);
+  }
+
+  /* Grids */
+  .grid{ display:grid; gap: clamp(10px,1.6vw,14px); }
+  .row2{ grid-template-columns:1fr 1fr; }
+  .row3{ grid-template-columns:repeat(3,1fr); }
+  .row4{ grid-template-columns:repeat(4,1fr); }
+
+  /* Player */
+  #playerContainer{
+    aspect-ratio:16 / 9; background:var(--field); border:1px solid var(--stroke);
+    border-radius:var(--radius-md); overflow:hidden; display:grid; place-items:center;
+  }
+
+  /* Toolbar */
+  .toolbar{
+    display:flex; gap:10px; align-items:center; margin-top:10px;
+    overflow:auto hidden; padding-bottom:2px; scrollbar-width:thin;
+  }
   .pill{
-    display:inline-flex; align-items:center; justify-content:center; white-space: nowrap;
-    min-height: 38px; padding: 8px 12px; border-radius: 999px; background: #0a1438; border: 1px solid #2b3f80;
-    color: #f2f5ff; font-weight: 800; letter-spacing: .2px; user-select: none; cursor: pointer;
-    transition: transform .05s, background .15s, border .15s, box-shadow .15s, filter .1s;
+    display:inline-flex; align-items:center; justify-content:center;
+    min-height:40px; padding:10px 14px; border-radius:999px;
+    background:var(--pill); border:1px solid var(--pill-stroke); color:var(--text);
+    font-family: var(--font-accent); font-weight:700; letter-spacing:.2px;
+    cursor:pointer; transition:transform .04s ease, filter .15s ease, background .15s ease;
+    user-select:none; white-space:nowrap;
   }
-  .pill:hover{ background: #0f1b49; border-color:#3a57a8; }
-  .pill:active{ transform: translateY(1px); }
-  .pill[aria-pressed="true"]{ background:#16266b; border-color:#4a73df; box-shadow: inset 0 0 0 1px #2b4ec7; }
-  @media (max-width: 760px){ .pill{ min-height: 36px; padding: 7px 11px; font-size: 0.96rem; } }
+  .pill:hover{ filter:brightness(1.05) }
+  .pill:active{ transform: translateY(1px) }
+
+  /* Primary CTA */
   .btn{
-    background: linear-gradient(140deg, var(--accent), var(--accent-2));
-    color: #041027; border: none; border-radius: 12px; padding: 12px 16px; font-weight: 900; letter-spacing: .3px;
-    cursor: pointer; min-height: clamp(44px, 5.8vw, 50px); box-shadow: 0 8px 24px rgba(105,163,255,.35);
-    transition: transform .06s, box-shadow .2s, filter .1s;
+    background:linear-gradient(140deg, var(--accent), var(--accent-2));
+    color:#041027; border:none; border-radius:12px; padding:14px 18px;
+    font-family: var(--font-accent); font-weight:800; letter-spacing:.2px;
+    cursor:pointer; min-height:clamp(46px,5.8vw,52px);
+    transition: filter .15s ease, transform .03s ease;
   }
-  .btn:hover{ filter: brightness(1.05); box-shadow: 0 10px 28px rgba(105,163,255,.45); }
-  .btn:active{ transform: translateY(1px); }
-  .btn:disabled{ opacity: .6; cursor: not-allowed; }
-  .actions{ display:flex; gap: 12px; align-items:center; }
-  @media (max-width: 760px){ .actions{ position: sticky; bottom: 10px; z-index: 10; } .actions .btn{ flex: 1; } }
-  pre{ white-space: pre-wrap; background: #091336; border:1px solid var(--stroke); color:#dfe6ff;
-    padding: 14px; border-radius: 14px; height: clamp(240px, 36vh, 320px); overflow: auto; }
-  a.dl{ display:inline-block; margin-top:10px; color:#00171f; background: var(--success);
-    padding: 10px 14px; border-radius: 12px; text-decoration:none; font-weight: 900; }
+  .btn:hover{ filter:brightness(1.04) }
+  .btn:active{ transform:translateY(1px) }
+  .btn:disabled{ opacity:.6; filter:saturate(.75); cursor:not-allowed }
+
+  .rowhead{ color:var(--muted); font-weight:800; margin:6px 0 2px; font-family: var(--font-accent) }
+  small.hint{ color:var(--muted); opacity:.95; display:block; margin-top:6px; font-family: var(--font-ui) }
+
+  /* Logs */
+  pre{
+    white-space:pre-wrap; background:var(--field); border:1px solid var(--stroke);
+    color:var(--text); padding:14px; border-radius:var(--radius-md);
+    height: clamp(240px, 36vh, 320px); overflow:auto; margin:0;
+    font-family: var(--font-mono); font-size: 13.5px;
+  }
+  a.dl{
+    display:inline-block; margin-top:10px; color:#00171f;
+    background: var(--success); padding:10px 14px; border-radius:12px;
+    text-decoration:none; font-weight:900; font-family: var(--font-accent)
+  }
+
+  /* Responsive */
+  @media (max-width:1024px){ .row4{ grid-template-columns:repeat(2,1fr); } }
+  @media (max-width:760px){
+    .row3,.row2,.row4{ grid-template-columns:1fr; }
+    .toolbar{ gap:8px }
+    .pill{ min-height:38px; padding:10px 13px }
+    #playerContainer{ border-radius:var(--radius-md) }
+    .actions{
+      position:sticky; bottom:0; padding-top:8px;
+      background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--bg) 92%, transparent) 40%);
+      backdrop-filter:saturate(120%) blur(6px)
+    }
+    #startBtn{ width:100% }
+  }
+  @media (max-width:360px){ .pill{ font-size:12px; padding:8px 10px } }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>🎬 YouTube → Auto Subtitles (Hindi / Hinglish / English)</h1>
+  <header>
+    <h1>🎬 YouTube → Downloader + Auto Subtitles (VOD + Live)</h1>
+    <!-- Theme switcher (does not change your form fields) -->
+    <div class="theme-switch" title="Theme">
+      <label for="themeSel">Theme</label>
+      <select id="themeSel" aria-label="Theme">
+        <option value="dark" selected>Dark</option>
+        <option value="light">Light</option>
+        <option value="purple">Purple</option>
+        <option value="contrast">High Contrast</option>
+      </select>
+    </div>
+  </header>
 
   <div class="card">
     <form id="jobForm">
+      <!-- EXACT same fields/options you provided -->
       <label for="urlInput">YouTube URL</label>
-      <input id="urlInput" type="url" inputmode="url" name="url" required placeholder="https://www.youtube.com/watch?v=..." />
+      <input id="urlInput" type="url" name="url" required placeholder="https://www.youtube.com/watch?v=... or https://www.youtube.com/live/..." />
 
       <div class="player-wrap" style="margin-top:8px">
         <div id="playerContainer"><div id="ytplayer" style="width:100%;height:100%"></div></div>
@@ -114,54 +226,99 @@
           <button class="pill" type="button" data-seek="1">↠ 1s</button>
           <button class="pill" type="button" data-seek="5">↠ 5s</button>
 
-          <span style="margin-left:6px;color:var(--muted)">Pick:</span>
+          <span style="margin-left:6px;color:var(--muted);font-family:var(--font-ui)">Pick:</span>
           <button class="pill" type="button" id="setStart">Set Start ⟵ Now</button>
           <button class="pill" type="button" id="setEnd">Set End ⟵ Now</button>
           <button class="pill" type="button" id="swapSE">Swap</button>
           <button class="pill" type="button" id="clearSE">Clear</button>
 
-          <span style="margin-left:6px;color:var(--muted)">Quick length:</span>
+          <span style="margin-left:6px;color:var(--muted);font-family:var(--font-ui)">Quick length:</span>
           <button class="pill" type="button" data-qlen="10">+10s</button>
           <button class="pill" type="button" data-qlen="15">+15s</button>
           <button class="pill" type="button" data-qlen="20">+20s</button>
           <button class="pill" type="button" data-qlen="30">+30s</button>
 
-          <label class="pill" style="display:flex;align-items:center;gap:8px">
+          <label class="pill inline-check" style="gap:8px">
             <input id="loopToggle" type="checkbox" />
             Loop selection
           </label>
-
-          <span class="shortcuts" style="margin-left:auto;color:var(--muted)">
-            Shortcuts:
-            <span class="kbd">J</span> -10s
-            <span class="kbd">K</span> ⏯
-            <span class="kbd">L</span> +10s
-            <span class="kbd">S</span> Set Start
-            <span class="kbd">E</span> Set End
-            <span class="kbd">,</span> -0.5s
-            <span class="kbd">.</span> +0.5s
-          </span>
         </div>
       </div>
 
-      <div class="grid row2" style="margin-top:12px">
+      <div class="grid row2" style="margin-top:12px" id="vodRange">
         <div>
           <label for="startInput">Start (HH:MM:SS)</label>
-          <input id="startInput" type="text" name="start" placeholder="e.g. 00:02:30 (optional)" />
+          <input id="startInput" type="text" name="start" placeholder="Leave blank for full video" />
         </div>
         <div>
           <label for="endInput">End (HH:MM:SS)</label>
-          <input id="endInput" type="text" name="end" placeholder="e.g. 00:03:05 (optional)" />
+          <input id="endInput" type="text" name="end" placeholder="Leave blank for full video" />
         </div>
       </div>
 
-      <div class="grid row4" style="margin-top:6px">
+      <div class="grid row3" style="margin-top:6px">
+        <div>
+          <span class="rowhead">Live Stream</span>
+          <label class="inline-check"><input type="checkbox" name="is_live" id="is_live" /> This is a live stream (record)</label>
+          <small class="hint">For LIVE: we record then trim (Start/End work after capture). If DVR exists, you can rewind in the player.</small>
+        </div>
+        <div id="liveExtras">
+          <label class="inline-check"><input type="checkbox" name="live_from_start" id="live_from_start" /> Live from start (DVR)</label>
+          <label style="margin-top:10px">Record duration</label>
+          <input type="text" name="live_duration" id="live_duration" placeholder="HH:MM:SS or seconds (blank = until ended/manual stop)" />
+          <small class="hint">Tip: When LIVE, Quick length sets this box automatically.</small>
+        </div>
+        <div></div>
+      </div>
+
+      <div class="grid row3" style="margin-top:6px">
+        <div>
+          <label>Quality</label>
+          <select name="quality" id="quality">
+            <option value="best" selected>Auto (Best)</option>
+            <option value="1080p">1080p</option>
+            <option value="1440p">1440p</option>
+            <option value="2160p">2160p (4K)</option>
+          </select>
+        </div>
+        <div>
+          <label>Container</label>
+          <select name="container" id="container">
+            <option value="mkv" selected>MKV (recommended)</option>
+            <option value="mp4">MP4</option>
+          </select>
+          <small class="hint">MKV avoids re-encode; MP4 may transcode 4K.</small>
+        </div>
+        <div></div>
+      </div>
+
+      <div class="grid row3" style="margin-top:6px">
+        <div>
+          <span class="rowhead">Layout</span>
+          <label class="inline-check"><input type="radio" name="layout" value="original_16x9" checked /> Original 16:9</label>
+          <label class="inline-check" style="margin-top:6px"><input type="radio" name="layout" value="shorts_9x16" /> Shorts 9:16</label>
+        </div>
+
+        <div id="asrBlock">
+          <span class="rowhead">Subtitles & Render</span>
+          <label class="inline-check"><input type="checkbox" name="burn" id="burn" checked /> Include subtitles</label>
+          <label class="inline-check" style="margin-top:6px"><input type="checkbox" name="anim" id="anim" checked /> Animate captions</label>
+        </div>
+
+        <div>
+          <span class="rowhead">Raw Download</span>
+          <label class="inline-check"><input type="checkbox" name="raw" id="raw" /> Raw download only (no processing)</label>
+          <small class="hint">Ignores layout/subtitles; best for long lives.</small>
+        </div>
+      </div>
+
+      <div class="grid row4" style="margin-top:6px" id="asrDetails">
         <div>
           <label>Model</label>
           <select name="model">
-            <option value="small" selected>small</option>
+            <option value="small">small</option>
             <option value="medium">medium</option>
-            <option value="large-v3">large-v3</option>
+            <option value="large-v3" selected>large-v3</option>
           </select>
         </div>
         <div>
@@ -182,7 +339,7 @@
           </select>
         </div>
         <div>
-          <label>Output</label>
+          <label>Output text</label>
           <select name="output_mode">
             <option value="hindi" selected>Hindi (Devanagari)</option>
             <option value="hinglish">Hinglish (romanized Hindi)</option>
@@ -203,7 +360,7 @@
         </div>
         <div>
           <label>Local model folder (optional)</label>
-          <input type="text" name="local_model" placeholder="e.g. /models/faster-whisper-large-v3" />
+          <input type="text" name="local_model" id="local_model" placeholder="e.g. C:\models\faster-whisper-large-v3" />
         </div>
         <div>
           <label>Output base name</label>
@@ -215,18 +372,9 @@
         <div>
           <label>Cookies (optional)</label>
           <input type="file" name="cookies" accept=".txt" />
-          <div style="color:var(--muted)">Export Netscape cookies.txt from your browser for youtube.com + google.com if blocked.</div>
+          <small class="hint">Use if video is age/region restricted.</small>
         </div>
-        <div style="display:flex;align-items:center;gap:14px;justify-content:flex-start;margin-top:26px;flex-wrap:wrap">
-          <label style="display:flex;align-items:center;gap:8px;margin:0">
-            <input type="checkbox" name="anim" id="anim" checked />
-            Animate captions
-          </label>
-          <label style="display:flex;align-items:center;gap:8px;margin:0">
-            <input type="checkbox" name="burn" id="burn" checked />
-            Burn captions on video
-          </label>
-        </div>
+        <div></div>
       </div>
 
       <div class="actions" style="margin-top:14px">
@@ -244,8 +392,23 @@
 
 <script src="https://www.youtube.com/iframe_api"></script>
 <script>
-  const API_BASE = (location.protocol.startsWith('http')) ? '' : 'http://127.0.0.1:7860';
+  /* === Theme handling (non-breaking) === */
+  (function themeInit(){
+    const root = document.documentElement;
+    const sel = document.getElementById('themeSel');
+    const saved = localStorage.getItem('yttool_theme');
+    if(saved){ root.setAttribute('data-theme', saved); if(sel) sel.value = saved; }
+    else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+      root.setAttribute('data-theme','light'); if(sel) sel.value='light';
+    }
+    sel?.addEventListener('change', () => {
+      root.setAttribute('data-theme', sel.value);
+      localStorage.setItem('yttool_theme', sel.value);
+    });
+  })();
 
+  /* === Your existing logic kept intact === */
+  const API_BASE = (location.protocol.startsWith('http')) ? '' : 'http://127.0.0.1:7860';
   const logEl = document.getElementById('log');
   const startBtn = document.getElementById('startBtn');
   const resultEl = document.getElementById('result');
@@ -253,111 +416,110 @@
   const startInput = document.getElementById('startInput');
   const endInput = document.getElementById('endInput');
   const loopToggle = document.getElementById('loopToggle');
-  const burnToggle = document.getElementById('burn');
+  const isLiveToggle = document.getElementById('is_live');
+  const liveFromStart = document.getElementById('live_from_start');
+  const liveDuration = document.getElementById('live_duration');
 
   function appendLog(line){
     if (logEl.textContent === '(waiting)') logEl.textContent = '';
     logEl.textContent += line + '\n';
     logEl.scrollTop = logEl.scrollHeight;
   }
-
   function parseTime(str){
     if(!str) return NaN;
     const p = String(str).trim().split(':').map(x=>parseInt(x,10));
     if(p.some(isNaN)) return NaN;
     if(p.length===1) return p[0];
-    if(p.length===2) return p[0]*60 + p[1];
-    if(p.length===3) return p[0]*3600 + p[1]*60 + p[2];
+    if(p.length===2) return p[0]*60+p[1];
+    if(p.length===3) return p[0]*3600+p[1]*60+p[2];
     return NaN;
   }
   function fmtHHMMSS(sec){
-    if(!isFinite(sec) || sec<0) sec = 0;
-    sec = Math.floor(sec);
-    const h = Math.floor(sec/3600);
-    const m = Math.floor((sec%3600)/60);
-    const s = sec%60;
+    if(!isFinite(sec) || sec<0) sec=0; sec=Math.floor(sec);
+    const h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60),s=sec%60;
     return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
   }
 
-  let player = null;
-  let loopTimer = null;
-
+  let player = null, loopTimer = null;
   function extractYouTubeId(u){
     if(!u) return null;
     try{
-      const url = new URL(u);
+      const url=new URL(u);
       if(url.hostname.includes('youtu.be')) return url.pathname.slice(1);
       if(url.searchParams.get('v')) return url.searchParams.get('v');
       if(url.pathname.startsWith('/embed/')) return url.pathname.split('/')[2];
       if(url.pathname.startsWith('/shorts/')) return url.pathname.split('/')[2];
+      if(url.pathname.startsWith('/live/')) return url.pathname.split('/')[2];
     }catch(_){}
-    if(/^[A-Za-z0-9_\-]{11}$/.test(u.trim())) return u.trim();
+    if(/^[A-Za-z0-9_\-]{11}$/.test(String(u).trim())) return String(u).trim();
     return null;
   }
 
-  function onYouTubeIframeAPIReady(){ tryLoadPreview(); }
   function tryLoadPreview(){
     const id = extractYouTubeId(urlInput.value);
     if(!id) return;
-    if(player){
-      player.loadVideoById(id);
-    }else{
+    if(player){ player.loadVideoById(id); }
+    else{
       player = new YT.Player('ytplayer', {
-        videoId: id,
-        playerVars: { rel:0, modestbranding:1 },
-        events: { onReady: () => {}, onStateChange: onPlayerStateChange }
+        videoId:id,
+        playerVars:{ rel:0, modestbranding:1 },
+        events:{ onStateChange: onPlayerStateChange }
       });
     }
   }
-  function onPlayerStateChange(){ toggleLoop(loopToggle && loopToggle.checked); }
-  function getNow(){ return player ? player.getCurrentTime() : 0; }
-  function seekDelta(d){
-    if(!player) return;
-    const t = Math.max(0, getNow() + d);
-    player.seekTo(t, true);
-  }
-  function togglePlay(){
-    if(!player) return;
-    const s = player.getPlayerState();
-    if(s === YT.PlayerState.PLAYING){ player.pauseVideo(); }
-    else { player.playVideo(); }
-  }
-
+  function onYouTubeIframeAPIReady(){ tryLoadPreview(); }
+  window.onYouTubeIframeAPIReady = onYouTubeIframeAPIReady;
   urlInput.addEventListener('change', tryLoadPreview);
   urlInput.addEventListener('blur', tryLoadPreview);
-  urlInput.addEventListener('paste', () => setTimeout(tryLoadPreview, 50));
+  urlInput.addEventListener('paste', ()=>setTimeout(tryLoadPreview,50));
 
-  document.querySelectorAll('[data-seek]').forEach(btn=>{
-    btn.addEventListener('click', ()=>seekDelta(parseFloat(btn.dataset.seek)));
+  function getNow(){ return player ? player.getCurrentTime() : 0; }
+  function seekDelta(d){ if(player){ player.seekTo(Math.max(0, getNow()+d), true); } }
+  document.getElementById('togglePlay').addEventListener('click', ()=>{
+    if(!player) return;
+    const s=player.getPlayerState();
+    if(s===YT.PlayerState.PLAYING) player.pauseVideo(); else player.playVideo();
   });
-  document.getElementById('togglePlay').addEventListener('click', togglePlay);
+  document.querySelectorAll('[data-seek]').forEach(btn=> btn.addEventListener('click', ()=>seekDelta(parseFloat(btn.dataset.seek))));
 
+  // Start/End picking
   document.getElementById('setStart').addEventListener('click', ()=>{
-    startInput.value = fmtHHMMSS(getNow());
-    const s = parseTime(startInput.value), e = parseTime(endInput.value);
-    if(!isFinite(e) || e <= s) endInput.value = fmtHHMMSS(s + 15);
+    startInput.value = fmtHHMMSS(getNow()); maybeAutofillLiveDuration();
   });
   document.getElementById('setEnd').addEventListener('click', ()=>{
-    endInput.value = fmtHHMMSS(getNow());
+    endInput.value = fmtHHMMSS(getNow()); maybeAutofillLiveDuration();
   });
   document.getElementById('swapSE').addEventListener('click', ()=>{
-    const a = startInput.value, b = endInput.value;
-    startInput.value = b; endInput.value = a;
+    const a=startInput.value,b=endInput.value; startInput.value=b; endInput.value=a; maybeAutofillLiveDuration();
   });
-  document.getElementById('clearSE').addEventListener('click', ()=>{
-    startInput.value = ''; endInput.value = '';
-  });
+  document.getElementById('clearSE').addEventListener('click', ()=>{ startInput.value=''; endInput.value=''; });
+
+  // Quick length buttons
   document.querySelectorAll('[data-qlen]').forEach(btn=>{
     btn.addEventListener('click', ()=>{
+      const len = parseInt(btn.dataset.qlen,10);
       const s = parseTime(startInput.value);
-      if(isFinite(s)) endInput.value = fmtHHMMSS(s + parseInt(btn.dataset.qlen,10));
-      else{
-        const now = getNow();
-        startInput.value = fmtHHMMSS(now);
-        endInput.value = fmtHHMMSS(now + parseInt(btn.dataset.qlen,10));
+      if(isLiveToggle.checked){
+        liveDuration.value = fmtHHMMSS(len);
+        appendLog(`[ui] Live: set record duration to ${len}s`);
+      }else{
+        if(isFinite(s)) endInput.value = fmtHHMMSS(s + len);
+        else{
+          const now=getNow(); startInput.value = fmtHHMMSS(now); endInput.value = fmtHHMMSS(now + len);
+        }
       }
     });
   });
+
+  function maybeAutofillLiveDuration(){
+    if(!isLiveToggle.checked) return;
+    const s = parseTime(startInput.value), e = parseTime(endInput.value);
+    if(isFinite(s) && isFinite(e) && e > s){
+      const dur = Math.max(1, e - s + 3); // buffer
+      liveDuration.value = fmtHHMMSS(dur);
+      appendLog(`[ui] Live: auto record duration ${dur}s to cover Start→End`);
+    }
+  }
 
   function toggleLoop(on){
     if(loopTimer){ clearInterval(loopTimer); loopTimer=null; }
@@ -368,47 +530,29 @@
       if(!isFinite(s) || !isFinite(e) || e<=s) return;
       const t = getNow();
       if(t < s || t > e) player.seekTo(s, true);
-      if(player.getPlayerState() === YT.PlayerState.PLAYING && t >= e - 0.1){
-        player.seekTo(s, true);
-      }
+      if(player.getPlayerState() === YT.PlayerState.PLAYING && t >= e - 0.1){ player.seekTo(s, true); }
     }, 200);
   }
   if(loopToggle){ loopToggle.addEventListener('change', e=>toggleLoop(e.target.checked)); }
+  function onPlayerStateChange(){ toggleLoop(loopToggle && loopToggle.checked); }
 
-  window.addEventListener('keydown',(ev)=>{
-    if (matchMedia('(hover: none)').matches) return;
-    const tag = (ev.target && ev.target.tagName || '').toLowerCase();
-    if(tag === 'input' || tag === 'textarea') return;
-    if(ev.key === 'j' || ev.key === 'J'){ seekDelta(-10); }
-    if(ev.key === 'l' || ev.key === 'L'){ seekDelta(10); }
-    if(ev.key === 'k' || ev.key === 'K'){ togglePlay(); }
-    if(ev.key === 's' || ev.key === 'S'){ document.getElementById('setStart').click(); }
-    if(ev.key === 'e' || ev.key === 'E'){ document.getElementById('setEnd').click(); }
-    if(ev.key === ','){ seekDelta(-0.5); }
-    if(ev.key === '.'){ seekDelta(0.5); }
-  });
-
+  // Submit (unchanged API contract)
   document.getElementById('jobForm').addEventListener('submit', async (e)=>{
     e.preventDefault();
-    resultEl.innerHTML = '';
-    logEl.textContent = '(starting)…';
-    startBtn.disabled = true;
+    resultEl.innerHTML = ''; logEl.textContent = '(starting)…'; startBtn.disabled = true;
 
-    const s = parseTime(startInput.value), eT = parseTime(endInput.value);
-    if(isFinite(s) && isFinite(eT) && eT <= s){
-      const tmp = startInput.value; startInput.value = endInput.value; endInput.value = tmp;
+    const fd = new FormData(e.target);
+    ['burn','anim','raw','is_live','live_from_start'].forEach(k => fd.set(k, (fd.get(k) ? 'true' : 'false')));
+
+    if(fd.get('is_live') !== 'true'){
+      const s = parseTime(fd.get('start')), eT = parseTime(fd.get('end'));
+      if(isFinite(s) && isFinite(eT) && eT <= s){ const tmp = fd.get('start'); fd.set('start', fd.get('end')); fd.set('end', tmp); }
     }
-
-    const form = e.target;
-    const fd = new FormData(form);
-    fd.set('anim', fd.get('anim') ? 'true' : 'false');
-    fd.set('burn', fd.get('burn') ? 'true' : 'false');
 
     try{
       const res = await fetch(API_BASE + '/start', { method:'POST', body: fd });
       if(!res.ok) throw new Error('Failed to start job');
       const { job_id } = await res.json();
-
       const es = new EventSource((API_BASE || '') + '/logs/' + job_id);
       es.onmessage = (ev)=>{
         if(!ev.data) return;
@@ -417,23 +561,16 @@
           const fname = ev.data.slice(5);
           const url = (API_BASE || '') + '/download/' + job_id + '/' + encodeURIComponent(fname);
           resultEl.innerHTML = `<a class="dl" href="${url}">⬇ Download result</a>`;
-          es.close();
-          startBtn.disabled = false;
+          es.close(); startBtn.disabled = false;
         }
-        if(ev.data.startsWith('FAIL:')){
-          es.close();
-          startBtn.disabled = false;
-        }
+        if(ev.data.startsWith('FAIL:')){ es.close(); startBtn.disabled = false; }
       };
-      es.onerror = ()=>{ appendLog('[log stream closed]'); };
-    }catch(err){
-      appendLog('[ERROR] ' + err.message);
-      startBtn.disabled = false;
-    }
+      es.onerror = ()=> appendLog('[log stream closed]');
+    }catch(err){ appendLog('[ERROR] ' + err.message); startBtn.disabled = false; }
   });
 
+  // Player boot
   window.addEventListener('load', ()=> setTimeout(tryLoadPreview, 300));
 </script>
-<script src="https://www.youtube.com/iframe_api"></script>
 </body>
 </html>

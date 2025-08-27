@@ -1,12 +1,29 @@
-import os, re, json, uuid, threading, time, queue, subprocess, socket
+import os, re, json, uuid, threading, time, queue, subprocess, socket, base64
 from pathlib import Path
 from typing import List, Dict, Tuple, Optional
 from flask import Flask, request, jsonify, Response, send_from_directory
 from flask_cors import CORS
 
 # ============================================================
-# Render-friendly boot hardening (DNS + env)
+# Boot hardening + cookie init (HF/Koyeb/Spaces friendly)
 # ============================================================
+
+def _init_cookies_from_env():
+    """
+    If COOKIES_B64 is provided (e.g., in Koyeb/Spaces env),
+    decode it to /tmp/cookies.txt and set COOKIES_PATH so the app uses it.
+    """
+    b64 = os.getenv("COOKIES_B64", "").strip()
+    if not b64:
+        return
+    try:
+        dst = Path("/tmp/cookies.txt")
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        dst.write_bytes(base64.b64decode(b64))
+        os.environ["COOKIES_PATH"] = str(dst)
+        print(f"[cookies:init] wrote {dst}")
+    except Exception as e:
+        print(f"[cookies:init] failed: {e}")
 
 def _harden_dns():
     """
@@ -21,6 +38,7 @@ def _harden_dns():
     # Force resolver to try TCP ('use-vc'), keep retries small to fail fast in logs
     os.environ.setdefault("RES_OPTIONS", "use-vc attempts:2 timeout:3")
 
+_init_cookies_from_env()
 _harden_dns()
 
 # ---------------- Env & constants ----------------
@@ -76,7 +94,7 @@ def _select_cookies_file(job_cookies: Optional[Path]) -> Optional[Path]:
     """
     Preference order:
       1) Uploaded per-job cookies file
-      2) COOKIES_PATH env
+      2) COOKIES_PATH env (possibly populated by COOKIES_B64)
       3) ./cookies.txt next to app.py
     """
     if job_cookies and Path(job_cookies).exists():
@@ -412,7 +430,6 @@ def asr_segments_with_words(in_audio: str, model_id: str, device: str, compute_t
         text = _norm((seg.text or ""))
         if not text:
             continue
-
         if getattr(seg, "no_speech_prob", 0) > 0.85: continue
         if getattr(seg, "avg_logprob", 0) < -1.2:    continue
         text_out = devanagari_to_hinglish(text) if output_mode=="hinglish" else text
@@ -535,7 +552,10 @@ def job_worker(job_id: str, form: Dict):
 
         cookies_from_request = job.get("cookies")
         cookies_file = _select_cookies_file(cookies_from_request)
-        if cookies_file: qlog.put(f"[cookies] Using cookies file: {cookies_file}")
+        if cookies_file:
+            qlog.put(f"[cookies] Using cookies file: {cookies_file}")
+        else:
+            qlog.put("[cookies] None found — YouTube may block; upload cookies or set COOKIES_B64.")
 
         # Probe & detect live
         meta = _probe_formats(url, cookies_file, qlog)
@@ -626,7 +646,7 @@ def health(): return {"ok": True}
 
 @app.get("/diag")
 def diag():
-    """Quick DNS/egress sanity for Render."""
+    """Quick DNS/egress sanity."""
     r = {"port": os.getenv("PORT"),
          "ip_youtube": None,
          "curl_youtube_head": None}
@@ -650,6 +670,7 @@ def start_job():
     qlog = queue.Queue()
     JOBS[job_id] = {"queue": qlog, "done": False, "out_path": "", "workdir": workdir, "cookies": None}
 
+    # Optional per-job cookies upload
     if "cookies" in files and files["cookies"]:
         f = files["cookies"]
         if getattr(f, "filename", ""):
@@ -689,10 +710,9 @@ def root():
 @app.get("/favicon.ico")
 def favicon(): return "", 204
 
-# ---------------- Main (Render bind to $PORT) ----------------
+# ---------------- Main (bind to $PORT) ----------------
 if __name__ == "__main__":
     host = "0.0.0.0"
     port = int(os.getenv("PORT", "7860"))
-    # final attempt to enforce DNS on boot
     _harden_dns()
     app.run(host=host, port=port, debug=False)

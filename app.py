@@ -51,6 +51,23 @@ JOBS_DIR = Path(os.getenv("JOBS_DIR", str(BASE_DIR / "jobs")))
 JOBS_DIR.mkdir(exist_ok=True)
 JOBS: Dict[str, Dict] = {}
 
+
+# After: BASE_DIR = Path(__file__).parent.resolve()
+# Add this small block to materialize cookies from env if present:
+b64 = os.getenv("COOKIES_B64", "").strip()
+cookies_env_path = os.getenv("COOKIES_PATH", "/tmp/cookies.txt").strip()
+if b64:
+    try:
+        from base64 import b64decode
+        p = Path(cookies_env_path)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_bytes(b64decode(b64))
+        # Let the existing code discover it via COOKIES_PATH or local path
+        os.environ["COOKIES_PATH"] = str(p)
+    except Exception as e:
+        print("[cookies] Failed to write cookies from COOKIES_B64:", e)
+
+
 # -------------- (Optional) transliteration --------------
 _has_aksh = False
 _has_indic = False

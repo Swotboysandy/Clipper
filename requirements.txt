@@ -3,9 +3,8 @@ flask-cors
 yt-dlp
 faster-whisper
 numpy
-torch           # required for faster-whisper
+torch
 soundfile
 ffmpeg-python
-# Optional transliteration libs (safe to include)
 aksharamukha
 indic-transliteration
